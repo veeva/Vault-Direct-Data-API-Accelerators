@@ -1,0 +1,24 @@
+{
+  "convert_to_parquet": false,
+  "direct_data": {
+    "start_time": "2000-01-01T00:00Z",
+    "stop_time": "2025-04-09T00:00Z",
+    "extract_type": "full"
+  },
+  "s3": {
+    "iam_role_arn": "arn:aws:iam::123456789:role/Direct-Data-Role",
+    "bucket_name": "vault-direct-data-bucket",
+    "direct_data_folder": "direct-data",
+    "archive_filepath": "direct-data/201287-20250409-0000-F.tar.gz",
+    "extract_folder": "201287-20250409-0000-F"
+  },
+  "databricks": {
+    "catalog": "user",
+    "schema": "vault_developer_experience",
+    "external_storage": "s3-bucket-name",
+    "infer_schema": false,
+    "server_hostname": "cholecap-prod.cloud.databricks.com",
+    "http_path": "sql/protocolv1/o/123456789/1234-567890-abcde",
+    "access_token": "abcde123456789"
+  }
+}

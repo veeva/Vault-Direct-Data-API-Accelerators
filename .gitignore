@@ -1,0 +1,11 @@
+
+.DS_Store
+drop_tables_in_schema.py
+/.idea
+Vault-Direct-Data-Python-Scripts.iml
+/direct-data/*
+/resources/*
+*accelerator_test.py
+
+/accelerators/databricks/resources/hr/
+/accelerators/snowflake/resources/hr/
