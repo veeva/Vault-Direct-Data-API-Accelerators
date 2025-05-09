@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import pyarrow.parquet as pq
 
-from accelerators.snowflake.services.aws_s3_service import AwsS3Service
+from common.services.aws_s3_service import AwsS3Service
 from accelerators.snowflake.services.snowflake_service import SnowflakeService
 from common.utilities import log_message
 from common.utilities import update_table_name_that_starts_with_digit

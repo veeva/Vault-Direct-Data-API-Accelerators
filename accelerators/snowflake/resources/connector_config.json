@@ -1,5 +1,6 @@
 {
   "convert_to_parquet": true,
+  "extract_document_content" : true,
   "direct_data": {
     "start_time": "2000-01-01T00:00Z",
     "stop_time": "2025-04-09T00:00Z",
@@ -10,7 +11,8 @@
     "bucket_name": "vault-direct-data-bucket",
     "direct_data_folder": "direct-data",
     "archive_filepath": "direct-data/201287-20250409-0000-F.tar.gz",
-    "extract_folder": "201287-20250409-0000-F"
+    "extract_folder": "201287-20250409-0000-F",
+    "document_content_folder": "extracted_docs"
   },
   "snowflake": {
     "database": "DIRECT_DATA",

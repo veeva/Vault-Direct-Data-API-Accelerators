@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from accelerators.databricks.services.aws_s3_service import AwsS3Service
+from common.services.aws_s3_service import AwsS3Service
 from common.utilities import log_message
 
 sys.path.append('.')

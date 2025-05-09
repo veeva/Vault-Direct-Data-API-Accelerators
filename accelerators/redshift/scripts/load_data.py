@@ -7,7 +7,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from accelerators.redshift.services.redshift_service import RedshiftService
-from accelerators.redshift.services.aws_s3_service import AwsS3Service
+from common.services.aws_s3_service import AwsS3Service
 from common.utilities import log_message
 from common.utilities import update_table_name_that_starts_with_digit
 
@@ -252,7 +252,7 @@ def run(s3_service: AwsS3Service, redshift_service: RedshiftService, direct_data
             )
 
             log_message(log_level='Info',
-                        message=f'Retrieving manifest file from s3://{manifest_filepath}')
+                        message=f'Retrieving metadata file from s3://{metadata_filepath}')
             # Check if the file exists in S3
             s3_service.head_object(key=metadata_filepath)
 

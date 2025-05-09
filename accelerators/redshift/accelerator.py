@@ -1,14 +1,14 @@
 import sys
 
-from accelerators.redshift.scripts import direct_data_to_object_storage
+from accelerators.redshift.scripts import direct_data_to_object_storage, extract_doc_content
 from accelerators.redshift.scripts import download_and_unzip_direct_data_files
 from accelerators.redshift.scripts import load_data
 from accelerators.redshift.services.redshift_service import RedshiftService
 from common.utilities import read_json_file
 
 sys.path.append('.')
-from accelerators.redshift.services.aws_s3_service import AwsS3Service
-from accelerators.redshift.services.vault_service import VaultService
+from common.services.aws_s3_service import AwsS3Service
+from common.services.vault_service import VaultService
 
 
 def main():
@@ -17,6 +17,8 @@ def main():
 
     config_params: dict = read_json_file(config_filepath)
     convert_to_parquet: bool = config_params['convert_to_parquet']
+    extract_document_content: bool = config_params['extract_document_content']
+
     direct_data_params: dict = config_params['direct_data']
     s3_params: dict = config_params['s3']
     redshift_params: dict = config_params['redshift']
@@ -35,6 +37,11 @@ def main():
     load_data.run(s3_service=s3_service,
                   redshift_service=redshift_service,
                   direct_data_params=direct_data_params)
+
+    if extract_document_content:
+        extract_doc_content.run(s3_service=s3_service,
+                                 vault_service=vault_service,
+                                 convert_to_parquet=convert_to_parquet)
 
 
 if __name__ == "__main__":

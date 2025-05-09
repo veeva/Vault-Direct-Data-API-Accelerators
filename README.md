@@ -11,15 +11,16 @@ The Direct Data accelerators are discrete groups of Python scripts, intended to 
 ## Overview
 
 This project provides accelerator implementations that facilitate the loading of data from Vault to the following systems:
-* Snowflake
-* Databricks
-* Redshift
+* Vault -> S3 -> Snowflake
+* Vault -> S3 -> Databricks
+* Vault -> S3 -> Redshift
 
 These accelerators perform the following fundamental processes:
-* Downloads Direct Data files from Vault and uploading to S3
+* Downloads Direct Data files from Vault and uploades them to S3
 * Extracts content from the archived Direct Data file
 * Optionally converts the extracted CSV files to Parquet
 * Loads the data into the target data system
+* Optionally extracts document source content from Vautl and loads it into S3
 
 ## Architecture
 
@@ -32,17 +33,120 @@ The architecture of the accelerators is designed to be easily extendable, so tha
 The four fundamental classes that are being leveraged by each accelerator are:
 * **`VaultService`**: This class handles all the interactions with Vault. This primarily consists of executing API calls (e.g., authentication, listing and downloading direct Data files and document source content).
 * **`ObjectStorageService`**: This class interacts with the system that handles the files extracted from Vault. Right now, this class is solely extended to handle AWS S3 interactions.
-* **`DatabaseService`**: This class handles interactions with the target database. This includes loading Full, Incremental, and Log files. This also means that the table schemas are managed here as well.
+* **`DatabaseService`**: This class handles interactions with the target database. This includes loading Full, Incremental, and Log files. Table schemas are managed here as well.
 * **`DatabaseConnection`**: This class handles connecting to the target database, activating a database cursor, and executing SQL commands. This is utilized by the `DatabaseService` execute the specific database SQL commands.
 
 These classes, except for the `VaultService` class, can be extended to support any target system.
 
 ![services](images/services.png)
 
+**Configuration Files:**
+
+Each accelerator includes two configuration files that include the required parameters for connecting to Vault and the external systems. Each accelerator’s config file has examples of required parameters for that specific implementation. The files are described below.
+* **`vapil_settings.json`**: This file contains the required parameters to authenticate to Vault, and will vary depending on if a Basic username/password or Oauth security policy is used in the target Vault.
+```json
+{
+  "authenticationType": "BASIC",
+  "idpOauthAccessToken": "",
+  "idpOauthScope": "openid",
+  "idpUsername": "",
+  "idpPassword": "",
+  "vaultUsername": "integration.user@cholecap.com",
+  "vaultPassword": "Password123",
+  "vaultDNS": "cholecap.veevavault.com",
+  "vaultSessionId": "",
+  "vaultClientId": "Cholecap-Vault-",
+  "vaultOauthClientId": "",
+  "vaultOauthProfileId": "",
+  "logApiErrors": true,
+  "httpTimeout": null,
+  "validateSession": true
+}
+```
+* **`connector_config.json`**: This file contains the required parameters to connect to the external object storage and data system. The parameters will vary depending on the systems being connected. Below is an example for the Redshift Connector. Review the sample files for each accelerator implementation for additional examples.
+```json
+{
+  "convert_to_parquet": false,
+  "extract_document_content" : true,
+  "direct_data": {
+    "start_time": "2000-01-01T00:00Z",
+    "stop_time": "2025-04-09T00:00Z",
+    "extract_type": "incremental"
+  },
+  "s3": {
+    "iam_role_arn": "arn:aws:iam::123456789:role/Direct-Data-Role",
+    "bucket_name": "vault-direct-data-bucket",
+    "direct_data_folder": "direct-data",
+    "archive_filepath": "direct-data/201287-20250409-0000-F.tar.gz",
+    "extract_folder": "201287-20250409-0000-F",
+    "document_content_folder": "extracted_docs"
+  },
+  "redshift": {
+    "host": "direct-data.123GUID.us-east-1.redshift.amazonaws.com",
+    "port": "5439",
+    "user": "user",
+    "password": "password",
+    "database": "database",
+    "schema": "direct_data",
+    "iam_redshift_s3_read": "arn:aws:iam::123456789:role/RedshiftS3Read"
+  }
+}
+```
+
 **Scripts:**
 
 The logic that moves and transforms data between systems is handled in the included scripts.
-* **`accelerator.py`**: This is the entry point for the program. It’s used to instantiate the required classes and pass them into the following scripts that contain the core logic.
+* **`accelerator.py`**: This is the entry point for the program. It’s used to instantiate the required classes and pass them into the following scripts that contain the core logic. Below is an example `accelerator.py` script for the Redshift Accelerator.
+```python
+import sys
+
+from accelerators.redshift.scripts import direct_data_to_object_storage, extract_doc_content
+from accelerators.redshift.scripts import download_and_unzip_direct_data_files
+from accelerators.redshift.scripts import load_data
+from accelerators.redshift.services.redshift_service import RedshiftService
+from common.utilities import read_json_file
+
+sys.path.append('.')
+from common.services.aws_s3_service import AwsS3Service
+from common.services.vault_service import VaultService
+
+
+def main():
+  config_filepath: str = "path/to/connector_config.json"
+  vapil_settings_filepath: str = "path/to/vapil_settings.json"
+  
+  config_params: dict = read_json_file(config_filepath)
+  convert_to_parquet: bool = config_params['convert_to_parquet']
+  extract_document_content: bool = config_params['extract_document_content']
+
+  direct_data_params: dict = config_params['direct_data']
+  s3_params: dict = config_params['s3']
+  redshift_params: dict = config_params['redshift']
+
+  vault_service: VaultService = VaultService(vapil_settings_filepath)
+  s3_service: AwsS3Service = AwsS3Service(s3_params)
+  redshift_service: RedshiftService = RedshiftService(redshift_params)
+
+  direct_data_to_object_storage.run(vault_service=vault_service,
+                                    s3_service=s3_service,
+                                    direct_data_params=direct_data_params)
+
+  download_and_unzip_direct_data_files.run(s3_service=s3_service,
+                                           convert_to_parquet=convert_to_parquet)
+
+  load_data.run(s3_service=s3_service,
+                redshift_service=redshift_service,
+                direct_data_params=direct_data_params)
+
+  if extract_document_content:
+    extract_doc_content.run(s3_service=s3_service,
+                            vault_service=vault_service,
+                            convert_to_parquet=convert_to_parquet)
+
+
+if __name__ == "__main__":
+  main()
+```
 * **`direct_data_to_object_storage.py`**: This script handles downloading a designated Direct Data filet from Vault, and uploading the Direct Data tar.gz file to an Object Storage system, currently S3. This script handles multiple file parts natively.
 
 ![direct-data-to-object-storage](images/direct-data-to-object-storage.png)
@@ -55,11 +159,9 @@ The logic that moves and transforms data between systems is handled in the inclu
 
 ![load-data](images/load-data.png)
 
-**Configuration Files:**
+* **`extract_doc_content.py`**: This script retrieves the doc version IDs from the Full or Incremental document_version_sys.csv file, calls the Export Document Versions endpoint to export document content to File Staging, then downloads the content from File Staging and uploads to Object Storage.
 
-Each accelerator includes two configuration files that include the required parameters for connecting to Vault and the external systems. Each accelerator’s config file has examples of required parameters for that specific implementation. The files are described below.
-* **`vapil_settings.json`**: This file contains the required parameters to authenticate to Vault, and will vary depending on if a Basic username/password or Oauth security policy is used in the target Vault.
-* **`connector_config.json`**: This file contains the required parameters to connect to the external object storage and data system. The parameters will vary depending on the systems being connected. Review the sample files for each accelerator implementation for examples.
+![extract-doc-content](images/extract-doc-content.png)
 
 ## Implementations
 
@@ -96,9 +198,7 @@ There are [several ways](https://docs.databricks.com/aws/en/ingestion/) to handl
     * [Schema](https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-syntax-ddl-create-schema)
 
 **Considerations**
-* Due to the disparity between data classes and formats in Vault and what is accepted by DataBricks, only CSV loading is supported right now.
 * The data that gets loaded into Delta Lake tables are loaded as a String data type.
-* Additional logic can be implemented to [read Parquet](https://docs.databricks.com/aws/en/query/formats/parquet) files directly.
 
 ### Redshift Accelerator
 

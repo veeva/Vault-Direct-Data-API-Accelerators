@@ -1,11 +1,30 @@
 
 .DS_Store
 drop_tables_in_schema.py
+*.pyc
 /.idea
 Vault-Direct-Data-Python-Scripts.iml
 /direct-data/*
 /resources/*
-*accelerator_test.py
+hr/*
 
+/accelerators/databricks/resources/finance/
 /accelerators/databricks/resources/hr/
+/accelerators/snowflake/resources/finance/
 /accelerators/snowflake/resources/hr/
+/accelerators/redshift/resources/finance/
+/accelerators/redshift/resources/hr/
+/direct-data/
+/accelerators/redshift/resources/finance
+/accelerators/redshift/direct-data
+/accelerators/databricks/accelerator_test.py
+/accelerators/redshift/accelerator_test.py
+/accelerators/snowflake/accelerator_test.py
+/hr/
+/accelerators/redshift/resources/direct_data_testing_lr/
+/accelerators/redshift/resources/hr_demo/
+/accelerators/snowflake/resources/direct_data_testing_lr/
+/accelerators/snowflake/resources/hr_demo/
+/accelerators/databricks/resources/direct_data_testing_lr/
+/accelerators/databricks/resources/hr_demo/
+/hr_demo/

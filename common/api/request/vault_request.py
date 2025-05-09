@@ -65,7 +65,7 @@ class VaultRequest(ABC):
             the Reference ID is returned in the response headers of the returned Response class.
     """
 
-    VAULT_API_VERSION: str = 'v24.2'
+    VAULT_API_VERSION: str = 'v25.1'
     HTTP_HEADER_AUTHORIZATION: str = 'Authorization'
     HTTP_HEADER_VAULT_CLIENT_ID: str = 'X-VaultAPI-ClientID'
     HTTP_HEADER_REFERENCE_ID: str = "X-VaultAPI-ReferenceId"

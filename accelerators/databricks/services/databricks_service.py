@@ -163,14 +163,23 @@ class DatabricksService(DatabaseService):
 
         elif extract_type == "full" or "log":
 
+            if file_format_name == "PARQUET":
+                self.db_connection.execute_query(f"""
+                    CREATE TABLE IF NOT EXISTS {self.schema}.{table_name}
+                    USING DELTA
+                    AS SELECT * FROM parquet.`{s3_uri}` 
+                    LIMIT 0;
+                """)
+
+
             self.db_connection.execute_query(f"""
                         COPY INTO {self.schema}.{table_name}
                         FROM '{s3_uri}'
                         FILEFORMAT = {file_format_name}
-                        FORMAT_OPTIONS ('inferSchema' ='false',
+                        FORMAT_OPTIONS ('inferSchema' ='{self.infer_schema}',
                                         'delimiter' = ',',
                                         'header' = 'true')
-                        COPY_OPTIONS ('inferSchema' ='false');
+                        COPY_OPTIONS ('inferSchema' ='{self.infer_schema}');
                     """)
 
     def process_delete(self, row: pd.Series, starting_directory: str, file_extension: str, file_format_name: str):

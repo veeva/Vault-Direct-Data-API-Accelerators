@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from accelerators.snowflake.services.aws_s3_service import AwsS3Service
+from common.services.aws_s3_service import AwsS3Service
 from common.utilities import log_message
 
 sys.path.append('.')
@@ -35,7 +35,6 @@ def convert_csv_to_parquet(file_content: bytes, extract_file_path: str):
 
 def run(s3_service: AwsS3Service, convert_to_parquet: bool):
     """
-    TODO: Is this supposed to delete csv files?
     This method downloads a .tar.gz file from S3, unzips it, converts CSV files to Parquet if `convert_to_parquet` is True,
     deletes the CSV files, and uploads the converted files (either Parquet or CSV) back to S3.
 

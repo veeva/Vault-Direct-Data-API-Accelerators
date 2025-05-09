@@ -207,9 +207,9 @@ class SnowflakeService(DatabaseService):
             log_message(log_level='Info',
                         message=f'Stage {self.stage_name} already exists.')
 
-    def create_table_from_file_format(self, table_name: str, file_name: str, file_format_name: str):
+    def create_table_from_file_format(self, table_name: str, s3_stage_uri: str, file_format_name: str):
         log_message(log_level='Debug',
-                    message=f'Creating table {table_name} from staged file {file_name}...')
+                    message=f'Creating table {table_name} from staged file {s3_stage_uri}...')
 
         # Use INFER_SCHEMA to create the table
         try:
@@ -218,7 +218,7 @@ class SnowflakeService(DatabaseService):
                 USING TEMPLATE (
                     SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))
                     FROM TABLE(INFER_SCHEMA(
-                        LOCATION => '@{self.stage_name}/{file_name}',
+                        LOCATION => '@{s3_stage_uri}',
                         FILE_FORMAT => '{file_format_name.lower()}'
                     ))
                 );
@@ -240,7 +240,7 @@ class SnowflakeService(DatabaseService):
         if extract_type in ["full", "log"]:
             if infer_schema:
                 # Create the table dynamically
-                self.create_table_from_file_format(table_name, file, file_format_name)
+                self.create_table_from_file_format(table_name, s3_stage_uri, file_format_name)
 
             # Load data into the table
             self.db_connection.execute_query(f"""

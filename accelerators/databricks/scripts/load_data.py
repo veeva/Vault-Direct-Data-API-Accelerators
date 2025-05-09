@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 from pandas import DataFrame
 
-from accelerators.databricks.services.aws_s3_service import AwsS3Service
+from common.services.aws_s3_service import AwsS3Service
 from accelerators.databricks.services.databricks_service import DatabricksService
 from common.utilities import log_message, update_table_name_that_starts_with_digit
 
@@ -181,7 +181,7 @@ def run(s3_service: AwsS3Service, databricks_service: DatabricksService, direct_
                 else f"{starting_directory}/metadata_full{file_extension}"
             )
             log_message(log_level='Info',
-                        message=f'Retrieving manifest file from s3://{manifest_filepath}')
+                        message=f'Retrieving metadata file from s3://{metadata_filepath}')
             # Check if the file exists in S3
             s3_service.head_object(key=metadata_filepath)
 
@@ -193,7 +193,7 @@ def run(s3_service: AwsS3Service, databricks_service: DatabricksService, direct_
             else:
                 metadata_table = pd.read_csv(metadata_filepath)
 
-            if not infer_schema:
+            if file_extension != ".parquet":
                 log_message(log_level='Info',
                             message='Creating tables from metadata file')
                 databricks_service.create_all_tables(starting_directory, metadata_table)

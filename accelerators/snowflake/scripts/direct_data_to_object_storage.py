@@ -4,8 +4,8 @@ sys.path.append('.')
 from common.utilities import log_message
 from common.api.model.response.direct_data_response import DirectDataResponse
 from common.api.model.response.vault_response import VaultResponse
-from accelerators.snowflake.services.aws_s3_service import AwsS3Service
-from accelerators.snowflake.services.vault_service import VaultService
+from common.services.aws_s3_service import AwsS3Service
+from common.services.vault_service import VaultService
 
 
 def _handle_multipart_upload(s3_service: AwsS3Service, vault_service: VaultService,

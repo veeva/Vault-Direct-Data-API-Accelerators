@@ -170,7 +170,7 @@ class RedshiftService(DatabaseService):
 
     def drop_tables_in_schema(self, tables: list | tuple):
         for (table_name,) in tables:
-            drop_query: str = f'DROP TABLE "{table_name}";'
+            drop_query: str = f'DROP TABLE {self.schema}."{table_name}";'
             log_message(log_level='Info',
                         message=f"Executing: {drop_query}",
                         context=None)
