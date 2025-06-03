@@ -102,9 +102,9 @@ def handle_metadata_deletes(s3_service: AwsS3Service,
             redshift_service.db_connection.execute_query(drop_table_command)
         else:
             if columns:
-                alter_command = f"""ALTER TABLE {redshift_service.schema}.{table_name} 
-                                        {", ".join(f'DROP COLUMN "{col}"' for col in columns)}"""
-                redshift_service.db_connection.execute_query(alter_command)
+                for col in columns:
+                    alter_command = f"""ALTER TABLE {redshift_service.schema}.{table_name} DROP COLUMN "{col}";"""
+                    redshift_service.db_connection.execute_query(alter_command)
 
 
 def handle_metadata_changes(s3_service: AwsS3Service,
@@ -217,7 +217,7 @@ def load_data_into_tables(redshift_service: RedshiftService,
 
 def run(s3_service: AwsS3Service, redshift_service: RedshiftService, direct_data_params: dict):
     log_message(log_level='Info',
-                message=f'---Executing load_data_into_snowflake.py---')
+                message=f'---Executing load_data.py---')
     try:
         starting_directory = f"{s3_service.direct_data_folder}/{s3_service.extract_folder}"
         extract_type = direct_data_params['extract_type']

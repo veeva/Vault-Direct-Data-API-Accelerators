@@ -141,7 +141,7 @@ def handle_metadata_changes(s3_service: AwsS3Service,
 def run(s3_service: AwsS3Service, databricks_service: DatabricksService, direct_data_params: dict,
         convert_to_parquet: bool):
     log_message(log_level='Info',
-                message=f'---Executing load_data_into_databricks.py---')
+                message=f'---Executing load_data.py---')
     try:
         databricks_service.db_connection.open()
         starting_directory = f"{s3_service.direct_data_folder}/{s3_service.extract_folder}"

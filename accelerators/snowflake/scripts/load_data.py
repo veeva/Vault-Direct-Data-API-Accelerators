@@ -142,7 +142,7 @@ def handle_metadata_changes(s3_service: AwsS3Service,
 def run(s3_service: AwsS3Service, snowflake_service: SnowflakeService, direct_data_params: dict,
         convert_to_parquet: bool):
     log_message(log_level='Info',
-                message=f'---Executing load_data_into_snowflake.py---')
+                message=f'---Executing load_data.py---')
     try:
         starting_directory = f"{s3_service.direct_data_folder}/{s3_service.extract_folder}"
         extract_type = direct_data_params['extract_type']

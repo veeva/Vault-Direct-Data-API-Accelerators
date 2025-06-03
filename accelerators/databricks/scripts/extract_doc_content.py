@@ -3,6 +3,8 @@ from typing import Generator, List, Any
 
 from pandas import Series
 
+import pyrfc6266
+
 from common.services.aws_s3_service import AwsS3Service
 from common.services.vault_service import VaultService
 from common.api.model.response.document_response import DocumentExportResponse
@@ -92,9 +94,10 @@ def run(s3_service: AwsS3Service, vault_service: VaultService, convert_to_parque
                         # If the individual document export was successful, download it and put on S3.
                         if exported_document.responseStatus == "SUCCESS":
                             file_staging_response: VaultResponse = vault_service.download_item_from_file_staging(exported_document=exported_document)
+                            filename: str = pyrfc6266.parse_filename(file_staging_response.headers.get("Content-Disposition"))
                             log_message(log_level='Debug',
                                         message=f'File Staging results: {file_staging_response.responseMessage}')
-                            s3_service.put_object(key=f'{direct_data_folder}/{exported_document.id}_{exported_document.major_version_number__v}_{exported_document.minor_version_number__v}',
+                            s3_service.put_object(key=f'{direct_data_folder}/{exported_document.id}/{exported_document.major_version_number__v}_{exported_document.minor_version_number__v}/{filename}',
                                                   body=file_staging_response.binary_content)
                     is_vault_job_finished = True
                 else:

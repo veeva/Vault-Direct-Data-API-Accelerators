@@ -21,3 +21,4 @@ snowflake-connector-python
 pyodbc~=5.2.0
 cryptography~=44.0.0
 PyJWT~=2.10.1
+pyrfc6266~=1.0.2
