@@ -75,8 +75,7 @@ def run(s3_service: AwsS3Service, vault_service: VaultService, convert_to_parque
             job_id: int = export_doc_response.job_id
             if job_id is None:
                 log_message(log_level='Error',
-                        message='An error has occured exporting document versions',
-                        exception=export_doc_response.errors)
+                        message='An error has occured exporting document versions')
                 raise Exception("An error has occured exporting document versions")
             is_vault_job_finished = False
 
