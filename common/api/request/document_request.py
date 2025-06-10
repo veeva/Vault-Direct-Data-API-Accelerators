@@ -868,7 +868,7 @@ class DocumentRequest(VaultRequest):
             print(f'URL: {response.url}')
             ```
         """
-        endpoint = self.get_api_endpoint(endpoint=self._URL_DOC_EXTRACT)
+        endpoint = self.get_api_endpoint(endpoint=self._URL_DOC_EXTRACT_VERSIONS)
         self._add_body_param('source', include_source)
         self._add_body_param('renditions', include_renditions)
 
