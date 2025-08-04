@@ -1,5 +1,6 @@
 import pandas as pd
 from pandas import DataFrame
+from pyarrow import ExtensionArray
 
 from accelerators.snowflake.connections.snowflake_connection import SnowflakeConnection
 from common.services.database_service import DatabaseService
@@ -34,16 +35,16 @@ class SnowflakeService(DatabaseService):
         )
 
     @staticmethod
-    def create_sql_str(table_df: DataFrame, **kwargs) -> str:
+    def create_sql_str_column_definitions(table_df: DataFrame, is_picklist: bool = False, is_modify: bool = False, is_add: bool = False) -> str:
         """
         Generates a SQL string for creating table columns in Snowflake.
 
+        :param is_add:
+        :param is_modify:
         :param table_df: A DataFrame containing column details (column_name, type, length).
+        :param is_picklist: A boolean indicating if the table is the picklist table.
         :return: A partial SQL string defining the table columns.
         """
-        is_picklist: bool = kwargs.get('is_picklist', False)
-        is_modify: bool = kwargs.get('is_modify', False)
-        is_add: bool = kwargs.get('is_add', False)
         column_definitions: list = []
 
         for _, row in table_df.iterrows():
@@ -78,18 +79,34 @@ class SnowflakeService(DatabaseService):
                 )
             return ", ".join(column_definitions)
 
-    def check_if_table_exists(self, table: str):
-        query = f"""
-        SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES 
-        WHERE TABLE_NAME = '{table.lower()}' 
-        AND TABLE_SCHEMA = '{self.schema.lower()}';
-        """
+    def check_if_schema_exists(self):
 
-        query_result = self.db_connection.execute_query(query)
+        query: str = f"""
+                        SELECT schema_name
+                        FROM information_schema.schemata
+                        WHERE 
+                        schema_name = '{self.schema}'
+                """
+        try:
+            schema_exists_result: list = self.db_connection.execute_query(query)
+            if schema_exists_result and schema_exists_result[0][0]:
+                log_message(log_level='Info',
+                            message=f'{self.schema} exists.')
+            else:
+                log_message(log_level='Info',
+                            message=f'{self.schema} does not exist. Creating new schema')
+                create_schema_query: str = f"""
+                            CREATE SCHEMA {self.schema};
+                        """
+                self.db_connection.execute_query(create_schema_query)
 
-        return query_result[0][0] > 0
+        except Exception as e:
+            log_message(log_level='Error',
+                        message=f'Error checking if schema {self.schema} exists',
+                        exception=e)
+            raise e
 
-    def retrieve_column_info(self, table_name: str):
+    def retrieve_column_info(self, table_name: str) -> dict:
         existing_columns_query = f"""
         SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -111,17 +128,11 @@ class SnowflakeService(DatabaseService):
 
     def create_all_tables(self, starting_directory: str, metadata_table: pd.DataFrame):
 
-        unique_extract_values = metadata_table["extract"].unique()
+        unique_extract_values: ExtensionArray = metadata_table["extract"].unique()
 
-        def create_table(extract: str):
+        for extract in unique_extract_values:
             filtered_metadata = metadata_table[metadata_table["extract"] == extract]
-
-            if extract == "Document.document_version__sys":
-                filtered_metadata.loc[
-                    (filtered_metadata['column_name'] == 'document_number__v'),
-                    ['type', 'length']
-                ] = ['String', 255]
-
+            # Vault allows 255 characters for description__sys, but the extract metadata defines a length of 128.
             if extract == "Object.security_policy__sys":
                 filtered_metadata.loc[
                     (filtered_metadata['column_name'] == 'description__sys'),
@@ -131,11 +142,8 @@ class SnowflakeService(DatabaseService):
             new_table_name = update_table_name_that_starts_with_digit(extract.split(".")[1])
             self.create_single_table(table_name=new_table_name, filtered_metadata=filtered_metadata)
 
-        for extract in unique_extract_values:
-            create_table(extract=extract)
-
         # Create metadata table
-        column_definitions = {col: ["STRING"] for col in metadata_table.columns}
+        column_definitions: dict = {col: ["STRING"] for col in metadata_table.columns}
         new_metadata_df = pd.DataFrame.from_dict(column_definitions).astype(str)
         new_metadata_df.loc["length"] = 1000
         new_metadata_df = new_metadata_df.T.reset_index()
@@ -148,12 +156,22 @@ class SnowflakeService(DatabaseService):
 
         if table_name == "picklist":
             is_picklist = True
-        sql_string: str = self.create_sql_str(filtered_metadata, is_picklist=is_picklist, is_modify=False,
-                                              is_add=False)
+        sql_string: str = self.create_sql_str_column_definitions(filtered_metadata, is_picklist=is_picklist,
+                                                                 is_modify=False,
+                                                                 is_add=False)
 
         self.db_connection.execute_query(f"""
                 CREATE TABLE IF NOT EXISTS {self.schema}.{table_name} ({sql_string})
             """)
+
+    def add_columns_to_table(self, columns_to_add: pd.DataFrame, table_name: str):
+        column_definitions: str = self.create_sql_str_column_definitions(
+            table_df=columns_to_add, is_picklist=False,
+            is_modify=False, is_add=True)
+        alter_query: str = f"""
+                ALTER TABLE {self.schema}.{table_name} {column_definitions}
+            """
+        self.db_connection.execute_query(alter_query)
 
     def drop_tables_in_schema(self, tables: list | tuple):
         for (table_name,) in tables:
@@ -164,18 +182,68 @@ class SnowflakeService(DatabaseService):
             self.db_connection.execute_query(drop_query)
 
         log_message(log_level='Info',
-                    message=f"Tables dropped successfully",
-                    context=None)
+                    message=f"Tables dropped successfully")
 
-    def delete_data_from_table(self, starting_directory: str, file_format: str, file_format_name: str,
+    def drop_table(self, table_name: str):
+        drop_query: str = f'DROP TABLE IF EXISTS {self.schema}.{table_name};'
+        self.db_connection.execute_query(drop_query)
+
+    def drop_columns_from_table(self, table_name: str, columns: list):
+        drop_column_query: str = f"""
+            ALTER TABLE {self.schema}.{table_name} 
+            DROP COLUMN {", ".join(f'"{col}"' for col in columns)}
+        """
+        self.db_connection.execute_query(drop_column_query)
+
+    def delete_data_from_table(self, starting_directory: str,
                                manifest_table: pd.DataFrame):
-        deletes_filter = manifest_table[(manifest_table["type"] == "deletes") & (manifest_table["records"] > 0)]
+
+        deletes_filter: DataFrame = manifest_table[
+            (manifest_table["type"] == "deletes") & (manifest_table["records"] > 0)]
 
         for index, row in deletes_filter.iterrows():
             self.process_delete(row=row,
-                                starting_directory=starting_directory,
-                                file_format=file_format,
-                                file_format_name=file_format_name)
+                                starting_directory=starting_directory)
+
+    def create_staging_table(self, staging_table_name: str, **kwargs):
+        create_staging_table_query = f"""
+                    CREATE OR REPLACE TEMPORARY TABLE {staging_table_name} AS
+                    SELECT * FROM {kwargs['table_name']} LIMIT 0;
+                """
+        self.db_connection.execute_query(create_staging_table_query)
+
+    def insert_into_staging_table(self, staging_table_name: str, object_path: str):
+        stage_url: str = f"{self.object_storage_root}/"
+        relative_path: str = object_path.replace(stage_url, '')
+        s3_stage_uri: str = f"{self.stage_name}/{relative_path}"
+
+        if self.convert_to_parquet:
+            file_format_name = "parquet_file_format"
+            match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
+        else:
+            file_format_name = "csv_file_format"
+            match_by_column = ""
+
+        copy_into_query: str = f"""
+                    COPY INTO {staging_table_name}
+                    FROM @{s3_stage_uri}
+                    FILE_FORMAT = {file_format_name}
+                    {match_by_column};
+                """
+        self.db_connection.execute_query(copy_into_query)
+
+    def insert_into_target_table(self, table_name: str, **kwargs):
+        merge_data_query: str = f"""
+                    MERGE INTO {table_name} AS target
+                    USING {kwargs['staging_table_name']} AS source
+                    ON {kwargs['matching_statement']}
+                    WHEN MATCHED THEN
+                        UPDATE SET 
+                            {kwargs['set_clause']}
+                    WHEN NOT MATCHED THEN
+                        INSERT ({kwargs['insert_columns']}) VALUES ({kwargs['insert_values']});
+                """
+        self.db_connection.execute_query(merge_data_query)
 
     def check_if_stage_exists(self):
         """
@@ -229,74 +297,10 @@ class SnowflakeService(DatabaseService):
             print(f"Failed to create table {table_name}: {str(e)}")
             raise e
 
-    def load_data_into_tables(self,
-                              extract_type: str,
-                              table_name: str,
-                              file: str,
-                              file_format_name: str,
-                              s3_stage_uri: str,
-                              infer_schema: bool,
-                              match_by_column: str):
-        if extract_type in ["full", "log"]:
-            if infer_schema:
-                # Create the table dynamically
-                self.create_table_from_file_format(table_name, s3_stage_uri, file_format_name)
-
-            # Load data into the table
-            self.db_connection.execute_query(f"""
-                    COPY INTO {table_name}
-                    FROM @{s3_stage_uri}
-                    FILE_FORMAT = {file_format_name}
-                    {match_by_column}
-                """)
-        else:
-            temp_table_name = f"{table_name}_temp".upper()
-            temp_table_create_query = f"""
-                    CREATE OR REPLACE TEMPORARY TABLE {temp_table_name} AS
-                    SELECT * FROM {table_name} LIMIT 0;
-                """
-            self.db_connection.execute_query(temp_table_create_query)
-
-            load_data_query = f"""
-                    COPY INTO {temp_table_name}
-                    FROM @{s3_stage_uri}
-                    FILE_FORMAT = {file_format_name}
-                    {match_by_column};
-                """
-            self.db_connection.execute_query(load_data_query)
-
-            table_column_response = self.retrieve_column_info(table_name)
-            temp_table_column_response = self.retrieve_column_info(temp_table_name)
-            table_columns = list(table_column_response.keys())
-            temp_table_columns = [col for col in table_columns if col in temp_table_column_response.keys()]
-
-            set_clause = ', '.join([f'target."{col}" = source."{col}"' for col in table_columns])
-            insert_columns = ', '.join([f'"{col}"' for col in table_columns])
-            insert_values = ', '.join([f'source."{col}"' for col in temp_table_columns])
-
-            if table_name == 'picklist__sys':
-                matching_statement = 'target."object" = source."object" \nAND target."object_field" = source."object_field" \nAND target."picklist_value_name" = source."picklist_value_name"'
-            elif table_name == 'metadata':
-                matching_statement = 'target."extract" = source."extract" \nAND target."column_name" = source."column_name"'
-            else:
-                matching_statement = 'target."id" = source."id"'
-
-            merge_data_query = f"""
-                    MERGE INTO {table_name} AS target
-                    USING {temp_table_name} AS source
-                    ON {matching_statement}
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            {set_clause}
-                    WHEN NOT MATCHED THEN
-                        INSERT ({insert_columns}) VALUES ({insert_values});
-                """
-            self.db_connection.execute_query(merge_data_query)
-
-    def process_delete(self, row: pd.Series, starting_directory: str, file_format: str, file_format_name: str):
+    def process_delete(self, row: pd.Series, starting_directory: str):
         raw_table = row["extract"].split(".")[1].lower()
         related_file = row["file"]
-        if file_format == ".parquet":
+        if self.convert_to_parquet:
             related_file = related_file.replace(".csv", ".parquet")
         table_name = update_table_name_that_starts_with_digit(raw_table.replace('_deletes', ''))
 
@@ -322,12 +326,17 @@ class SnowflakeService(DatabaseService):
             # Load the data from the CSV file into the temporary view
             self.db_connection.execute_query(create_query)
 
+            if self.convert_to_parquet:
+                file_format_name = "parquet_file_format"
+            else:
+                file_format_name = "csv_file_format"
+
             load_query = f"""
                 COPY INTO {temp_table_name}
                 FROM @{self.stage_name}/{starting_directory}/{related_file}
                 FILE_FORMAT = {file_format_name}
             """
-            if file_format == ".parquet":
+            if self.convert_to_parquet:
                 load_query += "\nMATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
 
             load_query += ";"
@@ -342,28 +351,76 @@ class SnowflakeService(DatabaseService):
 
             self.db_connection.execute_query(delete_query)
 
-    def process_manifest_row(self,
-                             row: pd.Series,
-                             starting_directory: str,
-                             file_extension: str,
-                             file_format_name: str,
-                             extract_type: str,
-                             infer_schema: bool,
-                             match_by_column: str):
-        raw_table_name: str = row["extract"].split(".")[1]
-        table_name: str = update_table_name_that_starts_with_digit(raw_table_name)
-        file: str = row['file']
+    def create_file_format(self, file_format_name: str):
+        """
+        Creates a file format in Snowflake for the specified file type.
+        :param convert_to_parquet: If True, creates a file format for Parquet files, else create CSV file format.
+        """
+        log_message(log_level='Info',
+                    message=f'Creating file format')
 
-        if file_extension == ".parquet":
-            file = file.replace(".csv", ".parquet")
+        if self.convert_to_parquet:
+            self.db_connection.execute_query(
+                f"CREATE OR REPLACE FILE FORMAT {file_format_name} TYPE = 'PARQUET';")
+        else:
+            self.db_connection.execute_query(f"""
+                CREATE OR REPLACE FILE FORMAT {file_format_name}
+                FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+                TYPE = 'CSV'
+                SKIP_HEADER = 1;
+            """)
 
-        s3_stage_uri: str = f"{self.stage_name}/{starting_directory}/{file}"
+    def load_full_or_log_data(self, table_name: str, object_path: str, headers: list = None):
+        stage_url: str = f"{self.object_storage_root}/"
+        relative_path: str = object_path.replace(stage_url, '')
+        s3_stage_uri: str = f"{self.stage_name}/{relative_path}"
 
-        if not (extract_type == "incremental" and "metadata" in table_name):
-            self.load_data_into_tables(extract_type=extract_type,
-                                       table_name=table_name,
-                                       file=file,
-                                       file_format_name=file_format_name,
-                                       s3_stage_uri=s3_stage_uri,
-                                       infer_schema=infer_schema,
-                                       match_by_column=match_by_column)
+        if self.convert_to_parquet:
+            file_format_name = "parquet_file_format"
+            match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
+        else:
+            file_format_name = "csv_file_format"
+            match_by_column = ""
+
+        self.create_file_format(file_format_name=file_format_name)
+
+        if self.infer_schema:
+            # Create the table dynamically
+            self.create_table_from_file_format(table_name, s3_stage_uri, file_format_name)
+
+        # Load data into the table
+        self.db_connection.execute_query(f"""
+                    COPY INTO {table_name}
+                    FROM @{s3_stage_uri}
+                    FILE_FORMAT = {file_format_name}
+                    {match_by_column}
+                """)
+
+    def load_incremental_data(self, table_name: str, object_path: str, headers: str = None):
+        staging_table_name: str = f"{table_name}_staging".upper()
+        self.create_staging_table(staging_table_name=staging_table_name, table_name=table_name)
+        self.insert_into_staging_table(staging_table_name=staging_table_name, object_path=object_path)
+
+        table_column_response: dict = self.retrieve_column_info(table_name)
+        temp_table_column_response: dict = self.retrieve_column_info(staging_table_name)
+        table_columns: list = list(table_column_response.keys())
+        temp_table_columns = [col for col in table_columns if col in temp_table_column_response.keys()]
+
+        set_clause: str = ', '.join([f'target."{col}" = source."{col}"' for col in table_columns])
+        insert_columns: str = ', '.join([f'"{col}"' for col in table_columns])
+        insert_values: str = ', '.join([f'source."{col}"' for col in temp_table_columns])
+
+        if table_name == 'picklist__sys':
+            matching_statement = 'target."object" = source."object" \nAND target."object_field" = source."object_field" \nAND target."picklist_value_name" = source."picklist_value_name"'
+        elif table_name == 'metadata':
+            matching_statement = 'target."extract" = source."extract" \nAND target."column_name" = source."column_name"'
+        else:
+            matching_statement = 'target."id" = source."id"'
+
+        self.insert_into_target_table(table_name=table_name,
+                                      staging_table_name=staging_table_name,
+                                      matching_statement=matching_statement,
+                                      set_clause=set_clause,
+                                      insert_columns=insert_columns,
+                                      insert_values=insert_values)
+

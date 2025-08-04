@@ -1,4 +1,5 @@
 from databricks import sql
+from databricks.sql.client import Cursor
 
 from common.connections.database_connection import DatabaseConnection
 from common.utilities import log_message
@@ -39,14 +40,6 @@ class DatabricksConnection(DatabaseConnection):
                 message=f"Error connecting to Databricks: {e}")
             raise e
 
-    def close(self):
-        """
-        Closes the database connection.
-        """
-        if self.connected:
-            self.con.close()
-            self.connected = False
-
     def execute_query(self, query: str):
         """
         Executes a given SQL query and fetches all results.
@@ -57,8 +50,22 @@ class DatabricksConnection(DatabaseConnection):
 
         log_message(
             log_level='Info',
-            message=f"Executing query: {query}", )
-        cursor.execute(query)
-        result = cursor.fetchall()
-        cursor.close()
-        return result
+            message=f"Executing query: {query}")
+
+        try:
+            cursor.execute(query)
+            return cursor.fetchall()
+        except sql.Error as e:
+            log_message(
+                log_level='Exception',
+                message=f"Error executing query: {query}",
+                exception=e)
+            return []
+
+    def activate_cursor(self):
+        if self.connected:
+            if self.cursor is None:
+                self.cursor: Cursor = self.con.cursor()
+
+    def close_cursor(self):
+        self.cursor.close()

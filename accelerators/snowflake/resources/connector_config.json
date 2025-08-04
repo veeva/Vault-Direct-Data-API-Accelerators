@@ -1,6 +1,7 @@
 {
   "convert_to_parquet": true,
   "extract_document_content" : true,
+  "retrieve_document_text" : true,
   "direct_data": {
     "start_time": "2000-01-01T00:00Z",
     "stop_time": "2025-04-09T00:00Z",
@@ -8,11 +9,12 @@
   },
   "s3": {
     "iam_role_arn": "arn:aws:iam::123456789:role/Direct-Data-Role",
-    "bucket_name": "vault-direct-data-bucket",
+    "bucket_name": "devexp-bucket",
     "direct_data_folder": "direct-data",
     "archive_filepath": "direct-data/201287-20250409-0000-F.tar.gz",
     "extract_folder": "201287-20250409-0000-F",
-    "document_content_folder": "extracted_docs"
+    "document_content_folder": "document_content",
+    "document_text_folder": "document_text"
   },
   "snowflake": {
     "database": "DIRECT_DATA",

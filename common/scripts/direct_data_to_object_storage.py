@@ -4,57 +4,56 @@ sys.path.append('.')
 from common.utilities import log_message
 from common.api.model.response.direct_data_response import DirectDataResponse
 from common.api.model.response.vault_response import VaultResponse
-from common.services.aws_s3_service import AwsS3Service
+from common.services.object_storage_service import ObjectStorageService
 from common.services.vault_service import VaultService
 
 
-def _handle_multipart_upload(s3_service: AwsS3Service, vault_service: VaultService,
-                             direct_data_item: DirectDataResponse.DirectDataItem, object_key: str):
+def _handle_multipart_upload(object_storage_service: ObjectStorageService, vault_service: VaultService,
+                             direct_data_item: DirectDataResponse.DirectDataItem, object_path: str):
     log_message(log_level='Info',
                 message=f'Handling multipart upload')
-    try:
-        multipart_upload_response: dict = s3_service.create_multipart_upload(
-            key=object_key)
 
-        upload_id: str = multipart_upload_response['UploadId']
-        parts: list = []
+    multipart_upload_response: dict | None = {}
+
+    try:
+        multipart_upload_response = object_storage_service.create_multipart_upload(
+            object_path=object_path)
+
+        upload_parts: list = []
 
         for file_part in direct_data_item.filepart_details:
-            file_part_number: int = file_part.filepart
             download_response: VaultResponse = vault_service.download_direct_data_file(
-                name=file_part.name,
-                filepart=file_part_number)
+                name=file_part.name)
 
-            upload_response: dict = s3_service.upload_part(
-                key=object_key,
-                upload_id=upload_id,
-                part_number=file_part_number,
-                body=download_response.binary_content)
+            part_info: dict = object_storage_service.upload_part(
+                object_path=object_path,
+                multipart_upload_response=multipart_upload_response,
+                part_number=file_part.filepart,
+                data=download_response.binary_content)
 
-            part_info: dict = {'PartNumber': file_part_number, 'ETag': upload_response['ETag']}
-            parts.append(part_info)
+            upload_parts.append(part_info)
 
-        s3_service.complete_multipart_upload(
-            key=object_key,
-            upload_id=upload_id,
-            parts=parts)
+        object_storage_service.complete_multipart_upload(
+            object_path=object_path,
+            multipart_upload_response=multipart_upload_response,
+            parts=upload_parts)
 
         log_message(log_level='Info',
-                    message=f'Multipart upload completed with upload ID: {upload_id}')
+                    message=f'Multipart upload completed')
 
     except Exception as e:
         # Abort the multipart upload in case of an error
-        s3_service.abort_multipart_upload(
-            key=object_key,
-            upload_id=upload_id)
+        object_storage_service.abort_multipart_upload(
+            object_path=object_path,
+            multipart_upload_response=multipart_upload_response)
 
         log_message(log_level='Error',
-                    message=f'Multipart upload aborted with upload ID: {upload_id}',
+                    message=f'Multipart upload aborted',
                     exception=e)
         raise e
 
 
-def run(vault_service: VaultService, s3_service: AwsS3Service, direct_data_params: dict):
+def run(vault_service: VaultService, object_storage_service: ObjectStorageService, direct_data_params: dict):
     log_message(log_level='Info',
                 message=f'---Executing direct_data_to_object_storage.py---')
     try:
@@ -77,28 +76,27 @@ def run(vault_service: VaultService, s3_service: AwsS3Service, direct_data_param
                         message=f'No records in the Direct Data extract.')
             return
 
-        # Put Direct Data file to S3 Bucket if there is only one file part
-        object_key: str = f"{s3_service.direct_data_folder}/{direct_data_item.filename}"
+        # Put Direct Data file to Object Storage if there is only one file part
+        object_path: str = f"{object_storage_service.direct_data_folder}/{direct_data_item.filename}"
         if direct_data_item.fileparts == 1:
 
             download_response: VaultResponse = vault_service.download_direct_data_file(
-                name=direct_data_item.filepart_details[0].name,
-                filepart=1)
+                name=direct_data_item.filepart_details[0].name)
 
-            s3_service.put_object(
-                key=object_key,
-                body=download_response.binary_content)
+            object_storage_service.upload_object(
+                object_path=object_path,
+                data=download_response.binary_content)
 
         # Create multi-part upload if Direct Data File has multiple parts
         else:
-            _handle_multipart_upload(s3_service=s3_service,
+            _handle_multipart_upload(object_storage_service=object_storage_service,
                                      vault_service=vault_service,
                                      direct_data_item=direct_data_item,
-                                     object_key=object_key)
+                                     object_path=object_path)
 
 
     except Exception as exception:
         log_message(log_level='Error',
                     message=f'Error retrieving Direct Data files from Vault'
-                            f' and uploading to S3 bucket',
+                            f' and uploading to Object Storage',
                     exception=exception)

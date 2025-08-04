@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from common.services.aws_s3_service import AwsS3Service
+from common.services.object_storage_service import ObjectStorageService
 from common.utilities import log_message
 
 sys.path.append('.')
@@ -33,27 +33,25 @@ def convert_csv_to_parquet(file_content: bytes, extract_file_path: str):
                 message=f"Parquet file created: {parquet_file_path}")
 
 
-def run(s3_service: AwsS3Service, convert_to_parquet: bool):
+def run(object_storage_service: ObjectStorageService):
     """
     TODO: Is this supposed to delete csv files?
-    This method downloads a .tar.gz file from S3, unzips it, converts CSV files to Parquet if `convert_to_parquet` is True,
-    deletes the CSV files, and uploads the converted files (either Parquet or CSV) back to S3.
+    This method downloads a .tar.gz file from Object Storage, unzips it, converts CSV files to Parquet if `convert_to_parquet` is True,
+    deletes the CSV files, and uploads the converted files (either Parquet or CSV) back to Object Storage.
 
-    :param s3_service: An instance of the AwsS3Service class
-    :param convert_to_parquet: A boolean value to determine if CSV files should be converted to Parquet
+    :param object_storage_service: An instance of ObjectStorageService class
     """
     log_message(log_level='Info',
                 message=f'---Executing download_and_unzip_direct_data_files.py---')
     try:
         # Create output directory
-        output_directory: str = f"{s3_service.archive_filepath.split('.')[0]}/"
+        output_directory: str = f"{object_storage_service.archive_filepath.split('.')[0]}/"
         if output_directory is None or output_directory == "":
-            output_directory = os.path.basename(s3_service.archive_filepath)[:-7]
+            output_directory = os.path.basename(object_storage_service.archive_filepath)[:-7]
         os.makedirs(output_directory, exist_ok=True)
 
-        # Get the zipped file from S3
-        get_object_response: dict = s3_service.get_object(key=s3_service.archive_filepath)
-        tarfile_content: bytes = get_object_response['Body'].read()
+        # Get the zipped file from Object Storage
+        tarfile_content: bytes = object_storage_service.download_object_bytes(object_path=object_storage_service.archive_filepath)
 
         # Write the zipped file to disk
         try:
@@ -69,15 +67,15 @@ def run(s3_service: AwsS3Service, convert_to_parquet: bool):
                     file_content = tar.extractfile(member).read()
 
                     # If it's a CSV file and convert_to_parquet is True, convert it
-                    if member.name.endswith('.csv') and convert_to_parquet:
+                    if member.name.endswith('.csv') and object_storage_service.convert_to_parquet:
                         try:
                             parquet_file_path: str = os.path.splitext(extract_file_path)[0] + '.parquet'
                             convert_csv_to_parquet(file_content=file_content, extract_file_path=parquet_file_path)
 
-                            # Upload the Parquet file to S3, maintaining the directory structure
-                            s3_destination_key = f'{output_directory}{member.name}'.replace('.csv', '.parquet')
+                            # Upload the Parquet file to Object Storage, maintaining the directory structure
+                            upload_object_path: str = f'{output_directory}{member.name}'.replace('.csv', '.parquet')
                             with open(parquet_file_path, 'rb') as parquet_file:
-                                s3_service.put_object(key=s3_destination_key, body=parquet_file)
+                                object_storage_service.upload_object(object_path=upload_object_path, data=parquet_file)
                         except Exception as e:
                             log_message(log_level='Error',
                                         message=f"Failed to convert {member.name} to Parquet",
@@ -85,13 +83,13 @@ def run(s3_service: AwsS3Service, convert_to_parquet: bool):
                         # Skip to the next file if conversion fails
                         continue
                     else:
-                        # Upload CSV or any other files directly to S3, maintaining directory structure
+                        # Upload CSV or any other files directly to Object Storage, maintaining directory structure
                         with open(extract_file_path, 'wb') as file:
                             file.write(file_content)
 
-                        # Upload file to S3 with the same directory structure
-                        s3_destination_key = f'{output_directory}{member.name}'
-                        s3_service.put_object(key=s3_destination_key, body=file_content)
+                        # Upload file to Object Storage with the same directory structure
+                        upload_object_path = f'{output_directory}{member.name}'
+                        object_storage_service.upload_object(object_path=upload_object_path, data=file_content)
 
         except tarfile.TarError or gzip.BadGzipFile as e:
             if isinstance(tarfile.TarError, e):

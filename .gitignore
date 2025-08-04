@@ -6,12 +6,14 @@ drop_tables_in_schema.py
 Vault-Direct-Data-Python-Scripts.iml
 /vaults/*
 /direct_data_testing_lr/*
-/finance/*
+/vaults/finance/*
+csv_to_parquet.py
 
-/accelerators/databricks/accelerator_test.py
-/accelerators/redshift/accelerator_test.py
+/accelerators/databricks/accelerator_direct_data_testing_lr.py
+/accelerators/redshift/accelerator_direct_data_testing_lr.py
 /accelerators/snowflake/accelerator_test.py
-/accelerators/sql_database/accelerator_test.py
+/accelerators/sql_database/accelerator_direct_data_testing_lr.py
+/accelerators/fabric/accelerator_direct_data_testing_lr.py
 /accelerators/databricks/resources/finance/
 /accelerators/databricks/resources/hr/
 /accelerators/databricks/resources/direct_data_testing_lr/
@@ -28,8 +30,20 @@ Vault-Direct-Data-Python-Scripts.iml
 /accelerators/sql_database/resources/hr/
 /accelerators/sql_database/resources/direct_data_testing_lr/
 /accelerators/sql_database/resources/hr_demo/
+/accelerators/fabric/resources/finance/
+/accelerators/fabric/resources/hr/
+/accelerators/fabric/resources/direct_data_testing_lr/
+/accelerators/fabric/resources/hr_demo/
 /direct-data/
 /hr/
 
 /vaults
-csv_to_parquet.py
+*accelerator_hr_demo.py
+*accelerator_finance_demo.py
+/accelerators/databricks/accelerator_finance.py
+accelerators/fabric/accelerator_finance.py
+accelerators/redshift/accelerator_finance.py
+accelerators/sql_database/accelerator_finance.py
+accelerators/sql_database/resources/finance_dashboard/vapil_settings.json
+accelerators/sql_database/resources/finance_dashboard/config_full.json
+accelerators/sql_database/accelerator_finance_dashboard.py

@@ -1,5 +1,12 @@
+import io
+import csv
 import os
 import time
+import pyarrow.parquet as pq
+
+from botocore.client import BaseClient
+from botocore.response import StreamingBody
+
 from common.services.object_storage_service import ObjectStorageService
 
 import boto3
@@ -9,19 +16,15 @@ from common.utilities import log_message
 
 class AwsS3Service(ObjectStorageService):
     def __init__(self, parameters: dict):
-        super().__init__()
+        super().__init__(parameters=parameters)
         self.iam_role_arn: str = parameters['iam_role_arn']
         self.bucket_name: str = parameters['bucket_name']
-        self.direct_data_folder: str = parameters['direct_data_folder']
-        self.archive_filepath: str = parameters['archive_filepath']
-        self.extract_folder: str = parameters['extract_folder']
-        self.document_content_folder = parameters['document_content_folder']
-        credentials: dict = self.retrieve_credentials(step='retrieve')
-        self.s3_client = boto3.client(
+        self.credentials: dict = self.retrieve_credentials(step='retrieve')
+        self.s3_client: BaseClient = boto3.client(
             's3',
-            aws_access_key_id=credentials['AccessKeyId'],
-            aws_secret_access_key=credentials['SecretAccessKey'],
-            aws_session_token=credentials['SessionToken']
+            aws_access_key_id=self.credentials['AccessKeyId'],
+            aws_secret_access_key=self.credentials['SecretAccessKey'],
+            aws_session_token=self.credentials['SessionToken']
         )
 
     def retrieve_credentials(self, step: str) -> dict:
@@ -37,7 +40,8 @@ class AwsS3Service(ObjectStorageService):
         try:
             self.credentials = sts_client.assume_role(
                 RoleArn=self.iam_role_arn,
-                RoleSessionName=f"Direct-Data-{step}-Session"
+                RoleSessionName=f"Direct-Data-{step}-Session",
+                DurationSeconds=3600
             ).get('Credentials')
 
             return self.credentials
@@ -49,131 +53,241 @@ class AwsS3Service(ObjectStorageService):
                         context=None)
             raise e
 
-    def head_object(self, key: str):
+    def check_if_object_exists(self, object_path: str):
         log_message(log_level='Debug',
-                    message=f'Retrieving object metadata from {self.bucket_name}/{key}')
+                    message=f'Checking if object exists: {self.bucket_name}/{object_path}')
         try:
-            response = self.s3_client.head_object(Bucket=self.bucket_name, Key=key)
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=object_path)
             log_message(log_level='Info',
-                        message=f'Object metadata successfully retrieved from {self.bucket_name}/{key}',
-                        context=None)
-            return response
+                        message=f'Object exists: {self.bucket_name}/{object_path}')
         except ClientError as e:
             if e.response['Error']['Code'] == '404':
                 log_message(log_level='Error',
-                            message=f'File not found on {self.bucket_name}/{key}',
-                            exception=e,
-                            context=None)
+                            message=f'File not found on {self.bucket_name}/{object_path}',
+                            exception=e)
             raise e
 
-    def get_object(self, key: str):
-        log_message(log_level='Debug',
-                    message=f'Downloading object from {self.bucket_name}/{key}')
-        try:
-            response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
-            log_message(log_level='Info',
-                        message=f'Object downloaded successfully from {self.bucket_name}/{key}',
-                        context=None)
-            return response
-        except ClientError as e:
-            log_message(log_level='Error',
-                        message=f'Error getting object from S3 {self.bucket_name}/{key}',
-                        exception=e,
-                        context=None)
-            raise e
 
-    def put_object(self, key: str, body):
-        log_message(log_level='Debug',
-                    message=f'Uploading to {self.bucket_name}/{key}')
-        try:
-            self.s3_client.put_object(Bucket=self.bucket_name, Key=key, Body=body)
-            log_message(log_level='Info',
-                        message=f'Uploaded successfully to {self.bucket_name}/{key}',
-                        context=None)
-        except ClientError as e:
-            log_message(log_level='Error',
-                        message=f'Error putting object to {self.bucket_name}/{key}',
-                        exception=e,
-                        context=None)
-            raise e
+    def upload_object(self, object_path: str, data: bytes) -> None:
+        """
+        Uploads an object to the specified S3 bucket using a memory-efficient,
+        multipart-capable method.
 
-    def create_multipart_upload(self, key: str) -> dict:
+        :param object_path: Path to the object in the storage.
+        :param data: Data to be uploaded (as a bytes object).
+        :return: None on success. Raises ClientError on failure.
+        """
         log_message(log_level='Debug',
-                    message=f'Creating multipart upload for bucket: {self.bucket_name} and directory: {key}')
+                    message=f'Uploading to {self.bucket_name}/{object_path}')
         try:
-            response = self.s3_client.create_multipart_upload(Bucket=self.bucket_name, Key=key)
-            log_message(log_level='Info',
-                        message=f'Multipart upload created successfully for bucket: {self.bucket_name} and directory: {key}',
-                        context=None)
-            return response
-        except ClientError as e:
-            log_message(log_level='Error',
-                        message=f'Error creating multipart upload to S3 bucket: {self.bucket_name} and directory: {key}',
-                        exception=e,
-                        context=None)
-            raise e
+            # 1. Wrap your in-memory 'data' in a file-like object.
+            with io.BytesIO(data) as file_obj:
+                # 2. Use upload_fileobj() which handles multipart uploads automatically.
+                self.s3_client.upload_fileobj(
+                    Fileobj=file_obj,
+                    Bucket=self.bucket_name,
+                    Key=object_path
+                )
 
-    def upload_part(self, key: str, upload_id: str, part_number: int, body: bytes):
-        log_message(log_level='Debug',
-                    message=f'Uploading part {part_number} to bucket: {self.bucket_name} and directory: {key}')
-        try:
-            response = self.s3_client.upload_part(Bucket=self.bucket_name, Key=key, Body=body, UploadId=upload_id, PartNumber=part_number)
             log_message(log_level='Info',
-                        message=f'Part {part_number} uploaded successfully to bucket: {self.bucket_name} and directory: {key}'
-                                f'with ETag: {response["ETag"]}',
-                        context=None)
-            return response
-        except ClientError as e:
-            log_message(log_level='Error',
-                        message=f'Error uploading part {part_number} to S3 bucket: {self.bucket_name} and directory: {key}',
-                        exception=e,
-                        context=None)
-            raise e
+                        message=f'Uploaded successfully to {self.bucket_name}/{object_path}')
 
-    def complete_multipart_upload(self, key: str, upload_id: str, parts: list):
-        log_message(log_level='Debug',
-                    message=f'Completing multipart upload for bucket: {self.bucket_name} and directory: {key}')
-        try:
-            response = self.s3_client.complete_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
-            log_message(log_level='Info',
-                        message=f'Multipart upload completed successfully for bucket: {self.bucket_name} and directory: {key}')
-            return response
         except ClientError as e:
             log_message(log_level='Error',
-                        message=f'Error completing multipart upload to S3 bucket: {self.bucket_name} and directory: {key}',
+                        message=f'Error uploading object to {self.bucket_name}/{object_path}',
                         exception=e)
             raise e
 
-    def abort_multipart_upload(self, key: str, upload_id: str):
+    def create_multipart_upload(self, object_path: str) -> dict:
         log_message(log_level='Debug',
-                    message=f'Aborting multipart upload for bucket: {self.bucket_name} and directory: {key}')
+                    message=f'Creating multipart upload for bucket: {self.bucket_name} and directory: {object_path}')
         try:
-            response = self.s3_client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=upload_id)
+            response = self.s3_client.create_multipart_upload(Bucket=self.bucket_name, Key=object_path)
             log_message(log_level='Info',
-                        message=f'Multipart upload aborted successfully for bucket: {self.bucket_name} and directory: {key}')
+                        message=f'Multipart upload created successfully for bucket: {self.bucket_name} and directory: {object_path}')
             return response
         except ClientError as e:
             log_message(log_level='Error',
-                        message=f'Error aborting multipart upload to S3 bucket: {self.bucket_name} and directory: {key}',
+                        message=f'Error creating multipart upload to S3 bucket: {self.bucket_name} and directory: {object_path}',
                         exception=e)
             raise e
 
-    def download_file(self, key: str, filename: str):
+    def upload_part(self, object_path: str, multipart_upload_response: dict, part_number: int, data: bytes) -> dict:
         log_message(log_level='Debug',
-                    message=f'Downloading object from {self.bucket_name}/{key}')
+                    message=f'Uploading part {part_number} to bucket: {self.bucket_name} and directory: {object_path}')
         try:
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            directory = os.path.dirname(filename)
+            response = self.s3_client.upload_part(Bucket=self.bucket_name,
+                                                  Key=object_path,
+                                                  Body=data,
+                                                  UploadId=multipart_upload_response['UploadId'],
+                                                  PartNumber=part_number)
+            log_message(log_level='Info',
+                        message=f'Part {part_number} uploaded successfully to bucket: {self.bucket_name} and directory: {object_path}'
+                                f'with ETag: {response["ETag"]}')
+            return {'PartNumber': part_number, 'ETag': response['ETag']}
+        except ClientError as e:
+            log_message(log_level='Error',
+                        message=f'Error uploading part {part_number} to S3 bucket: {self.bucket_name} and directory: {object_path}',
+                        exception=e)
+            raise e
+
+    def complete_multipart_upload(self, object_path: str, multipart_upload_response: dict, parts: list):
+        log_message(log_level='Debug',
+                    message=f'Completing multipart upload for bucket: {self.bucket_name} and directory: {object_path}')
+        try:
+            response = self.s3_client.complete_multipart_upload(Bucket=self.bucket_name, Key=object_path,
+                                                                UploadId=multipart_upload_response['UploadId'], MultipartUpload={'Parts': parts})
+            log_message(log_level='Info',
+                        message=f'Multipart upload completed successfully for bucket: {self.bucket_name} and directory: {object_path}')
+            return response
+        except ClientError as e:
+            log_message(log_level='Error',
+                        message=f'Error completing multipart upload to S3 bucket: {self.bucket_name} and directory: {object_path}',
+                        exception=e)
+            raise e
+
+    def abort_multipart_upload(self, object_path: str, multipart_upload_response: dict):
+        log_message(log_level='Debug',
+                    message=f'Aborting multipart upload for bucket: {self.bucket_name} and directory: {object_path}')
+        try:
+            response = self.s3_client.abort_multipart_upload(Bucket=self.bucket_name, Key=object_path, UploadId=multipart_upload_response['UploadId'])
+            log_message(log_level='Info',
+                        message=f'Multipart upload aborted successfully for bucket: {self.bucket_name} and directory: {object_path}')
+            return response
+        except ClientError as e:
+            log_message(log_level='Error',
+                        message=f'Error aborting multipart upload to S3 bucket: {self.bucket_name} and directory: {object_path}',
+                        exception=e)
+            raise e
+
+    def download_object_bytes(self, object_path: str):
+        log_message(log_level='Debug',
+                    message=f'Downloading object from {object_path}')
+        try:
+            response = self.s3_client.get_object(Bucket=self.bucket_name, Key=object_path)
+            log_message(log_level='Info',
+                        message=f'Object downloaded successfully from {self.bucket_name}/{object_path}')
+            return response['Body'].read()
+        except ClientError as e:
+            log_message(log_level='Error',
+                        message=f'Error getting object from S3 {self.bucket_name}/{object_path}',
+                        exception=e)
+            raise e
+
+    def download_object_to_stream(self, object_path: str) -> StreamingBody:
+        log_message(log_level='Debug',
+                    message=f'Downloading object from {object_path}')
+        try:
+            response = self.s3_client.get_object(Bucket=self.bucket_name, Key=object_path)
+            log_message(log_level='Info',
+                        message=f'Object downloaded successfully from {self.bucket_name}/{object_path}')
+            return response['Body']
+        except ClientError as e:
+            log_message(log_level='Error',
+                        message=f'Error getting object from S3 {self.bucket_name}/{object_path}',
+                        exception=e)
+            raise e
+
+    def download_object_to_local(self, object_path: str, output_path: str):
+        log_message(log_level='Debug',
+                    message=f'Downloading object from {self.bucket_name}/{object_path}')
+        try:
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            directory = os.path.dirname(output_path)
 
             if directory and not os.path.exists(directory):
                 os.makedirs(directory, exist_ok=True)
 
-            response = self.s3_client.download_file(Bucket=self.bucket_name, Key=key, Filename=filename)
+            self.s3_client.download_file(Bucket=self.bucket_name, Key=object_path, Filename=output_path)
             log_message(log_level='Info',
-                        message=f'Object downloaded to file: {filename} from {self.bucket_name}/{key}')
-            return response
+                        message=f'Object downloaded to file: {output_path}')
         except ClientError as e:
             log_message(log_level='Error',
-                        message=f'Error getting object from S3 {self.bucket_name}/{key}',
+                        message=f'Error getting object from S3: {self.bucket_name}/{object_path}',
+                        exception=e)
+            raise e
+
+    def get_full_object_path(self, filename: str) -> str:
+        """
+        Constructs the full S3 object path for a given filename.
+        :param filename: The name of the file in the S3 bucket.
+        """
+        return f"s3://{self.bucket_name}/{self.get_relative_object_path(filename)}"
+
+    def get_relative_object_path(self, filename: str) -> str:
+        """
+        Constructs the S3 object URL for a given filename.
+        :param filename: The name of the file in the S3 bucket.
+        """
+        return f"{self.direct_data_folder}/{self.extract_folder}/{filename}"
+
+    def get_headers_from_csv_file(self, object_path: str) -> list:
+        log_message(log_level='Info',
+                    message=f'Retrieving CSV headers for {object_path}')
+
+        response_stream = self.download_object_to_stream(object_path=object_path)
+
+        try:
+            # 1. Read an initial chunk of bytes from the stream.
+            # Both Boto3's StreamingBody and Azure's StorageStreamDownloader support a .read(size) method.
+            # 4096 bytes (4KB) should be more than enough for any typical header line.
+            initial_bytes_chunk = response_stream.read(4096)
+
+            if not initial_bytes_chunk:
+                log_message(log_level='Warning', message='Stream was empty or no data in initial chunk.')
+                return None
+
+            # 2. Decode these bytes to text (UTF-8 is common for CSVs).
+            # We only need the first line.
+            try:
+                decoded_text_chunk = initial_bytes_chunk.decode('utf-8', errors='replace')
+                first_line = decoded_text_chunk.splitlines(keepends=False)[0] if (
+                        '\n' in decoded_text_chunk or '\r' in decoded_text_chunk) else decoded_text_chunk
+            except UnicodeDecodeError as ude:
+                log_message(log_level='Error', message=f"UTF-8 decoding error for headers: {ude}")
+                raise ValueError("Could not decode headers as UTF-8.") from ude
+
+            if not first_line.strip():  # Handle cases where the first line might be blank after decoding/stripping
+                log_message(log_level='Warning', message='Decoded header line is empty.')
+                return None
+
+            # 3. Use io.StringIO to treat the first line string as a file for csv.reader.
+            with io.StringIO(first_line) as string_as_file:
+                csv_reader = csv.reader(string_as_file)
+                try:
+                    headers = next(csv_reader)
+                    return headers
+
+                except StopIteration:  # Handles case where the line was empty after all
+                    log_message(log_level='Warning', message='No CSV headers found in the first line.')
+                    return None
+        except csv.Error as e:
+            log_message(log_level='Error',
+                        message=f'Error reading CSV file: {e}',
+                        exception=e)
+            return None
+        except StopIteration:
+            log_message(log_level='Error',
+                        message='CSV file appears to be empty or corrupted')
+            return None
+
+    def get_headers_from_parquet_file(self, object_path: str) -> list:
+        log_message(log_level='Debug',
+                    message=f'Retrieving headers from Parquet file: {object_path}')
+        try:
+            # stream: io.BytesIO = io.BytesIO()
+            response_stream: StreamingBody = self.download_object_to_stream(object_path=object_path)
+            stream: io.BytesIO = io.BytesIO(response_stream.read())
+            stream.seek(0)
+
+            parquet_file: pq.ParquetFile = pq.ParquetFile(stream)  # Load the Parquet file
+            schema = parquet_file.schema_arrow
+            column_names: list[str] = schema.names
+            log_message(log_level='Info',
+                        message=f'Retrieved headers from Parquet file: {object_path}')
+            return column_names
+        except Exception as e:
+            log_message(log_level='Error',
+                        message=f'Error retrieving headers from Parquet file: {object_path}',
                         exception=e)
             raise e

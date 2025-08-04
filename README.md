@@ -11,16 +11,19 @@ The Direct Data accelerators are discrete groups of Python scripts, intended to 
 ## Overview
 
 This project provides accelerator implementations that facilitate the loading of data from Vault to the following systems:
-* Vault -> S3 -> Snowflake
-* Vault -> S3 -> Databricks
-* Vault -> S3 -> Redshift
+* Vault -> AWS S3 -> Snowflake
+* Vault -> AWS S3 -> Databricks
+* Vault -> AWS S3 -> Redshift
+* Vault -> Azure Blob Storage -> Azure SQL Database
+* Vault -> Azure Blob Storage -> Microsoft Fabric Warehouse
 
 These accelerators perform the following fundamental processes:
-* Downloads Direct Data files from Vault and uploades them to S3
-* Extracts content from the archived Direct Data file
-* Optionally converts the extracted CSV files to Parquet
-* Loads the data into the target data system
-* Optionally extracts document source content from Vautl and loads it into S3
+* Download Direct Data files from Vault and upload them to object storage (currently AWS S3 or Azure Blob Storage)
+* Extract content from the archived Direct Data file
+* Optionally convert the extracted CSV files to Parquet
+* Load the data into the target data system
+* Optionally extract document source content from Vault and upload to object storage
+* Optionally retrieve document version text from Vault and upload to object storage
 
 ## Architecture
 
@@ -31,8 +34,8 @@ The architecture of the accelerators is designed to be easily extendable, so tha
 **Classes:**
 
 The four fundamental classes that are being leveraged by each accelerator are:
-* **`VaultService`**: This class handles all the interactions with Vault. This primarily consists of executing API calls (e.g., authentication, listing and downloading direct Data files and document source content).
-* **`ObjectStorageService`**: This class interacts with the system that handles the files extracted from Vault. Right now, this class is solely extended to handle AWS S3 interactions.
+* **`VaultService`**: This class handles all interactions with Vault. This primarily consists of executing API calls (e.g., authentication, listing and downloading direct Data files, extracting document source content, and downloading document text).
+* **`ObjectStorageService`**: This class interacts with the object storage system that stores the files extracted from Vault. This includes uploading and downloading files, as well as managing file paths. Currently, this service supports AWS S3 and Azure Blob Storage.
 * **`DatabaseService`**: This class handles interactions with the target database. This includes loading Full, Incremental, and Log files. Table schemas are managed here as well.
 * **`DatabaseConnection`**: This class handles connecting to the target database, activating a database cursor, and executing SQL commands. This is utilized by the `DatabaseService` execute the specific database SQL commands.
 
@@ -68,6 +71,7 @@ Each accelerator includes two configuration files that include the required para
 {
   "convert_to_parquet": false,
   "extract_document_content" : true,
+  "retrieve_document_text" : true,
   "direct_data": {
     "start_time": "2000-01-01T00:00Z",
     "stop_time": "2025-04-09T00:00Z",
@@ -79,7 +83,8 @@ Each accelerator includes two configuration files that include the required para
     "direct_data_folder": "direct-data",
     "archive_filepath": "direct-data/201287-20250409-0000-F.tar.gz",
     "extract_folder": "201287-20250409-0000-F",
-    "document_content_folder": "extracted_docs"
+    "document_content_folder": "extracted_doc_content",
+    "document_text_folder": "extracted_doc_text"
   },
   "redshift": {
     "host": "direct-data.123GUID.us-east-1.redshift.amazonaws.com",
@@ -97,76 +102,88 @@ Each accelerator includes two configuration files that include the required para
 
 The logic that moves and transforms data between systems is handled in the included scripts.
 * **`accelerator.py`**: This is the entry point for the program. It’s used to instantiate the required classes and pass them into the following scripts that contain the core logic. Below is an example `accelerator.py` script for the Redshift Accelerator.
+
 ```python
 import sys
 
-from accelerators.redshift.scripts import direct_data_to_object_storage, extract_doc_content
-from accelerators.redshift.scripts import download_and_unzip_direct_data_files
-from accelerators.redshift.scripts import load_data
 from accelerators.redshift.services.redshift_service import RedshiftService
-from common.utilities import read_json_file
 
 sys.path.append('.')
+from common.scripts import (direct_data_to_object_storage, download_and_unzip_direct_data_files,
+                            extract_doc_content, load_data, retrieve_doc_text)
 from common.services.aws_s3_service import AwsS3Service
 from common.services.vault_service import VaultService
+from common.utilities import read_json_file
 
 
 def main():
   config_filepath: str = "path/to/connector_config.json"
   vapil_settings_filepath: str = "path/to/vapil_settings.json"
-  
-  config_params: dict = read_json_file(config_filepath)
-  convert_to_parquet: bool = config_params['convert_to_parquet']
-  extract_document_content: bool = config_params['extract_document_content']
 
+  config_params: dict = read_json_file(config_filepath)
   direct_data_params: dict = config_params['direct_data']
   s3_params: dict = config_params['s3']
   redshift_params: dict = config_params['redshift']
 
-  vault_service: VaultService = VaultService(vapil_settings_filepath)
+  extract_document_content: bool = config_params.get('extract_document_content')
+  retrieve_document_text: bool = config_params.get('retrieve_document_text')
+
+  object_storage_root: str = f's3://{s3_params["bucket_name"]}'
+
+  s3_params['convert_to_parquet'] = config_params['convert_to_parquet']
+  redshift_params['convert_to_parquet'] = config_params['convert_to_parquet']
+  redshift_params['object_storage_root'] = object_storage_root
+
   s3_service: AwsS3Service = AwsS3Service(s3_params)
   redshift_service: RedshiftService = RedshiftService(redshift_params)
+  vault_service: VaultService = VaultService(vapil_settings_filepath)
 
   direct_data_to_object_storage.run(vault_service=vault_service,
-                                    s3_service=s3_service,
+                                    object_storage_service=s3_service,
                                     direct_data_params=direct_data_params)
 
-  download_and_unzip_direct_data_files.run(s3_service=s3_service,
-                                           convert_to_parquet=convert_to_parquet)
+  download_and_unzip_direct_data_files.run(object_storage_service=s3_service)
 
-  load_data.run(s3_service=s3_service,
-                redshift_service=redshift_service,
+  load_data.run(object_storage_service=s3_service,
+                database_service=redshift_service,
                 direct_data_params=direct_data_params)
 
   if extract_document_content:
-    extract_doc_content.run(s3_service=s3_service,
-                            vault_service=vault_service,
-                            convert_to_parquet=convert_to_parquet)
+    extract_doc_content.run(object_storage_service=s3_service,
+                            vault_service=vault_service)
+
+  if retrieve_document_text:
+    retrieve_doc_text.run(object_storage_service=s3_service,
+                          vault_service=vault_service)
 
 
 if __name__ == "__main__":
   main()
+
 ```
-* **`direct_data_to_object_storage.py`**: This script handles downloading a designated Direct Data filet from Vault, and uploading the Direct Data tar.gz file to an Object Storage system, currently S3. This script handles multiple file parts natively.
+* **`direct_data_to_object_storage.py`**: This script handles downloading a designated Direct Data file from Vault, and uploading the Direct Data tar.gz file to an object storage system. This script handles multiple file parts natively.
 
 ![direct-data-to-object-storage](images/direct-data-to-object-storage.png)
 
-* **`download_and_unzip_direct_data_files.py`**: This script downloads the Direct Data file from S3, unzips the content, optionally converts the CSV files to parquet format, and uploads the unzipped content back to S3.
+* **`download_and_unzip_direct_data_files.py`**: This script downloads the Direct Data file from object storage, unzips the content, optionally converts the CSV files to parquet format, and uploads the unzipped content back to the object storage system.
 
 ![download-and-unzip-direct-data-files](images/download-and-unzip-direct-data-files.png)
 
-* **`load_data.py`**: This script facilitates loading the CSV extracts from object storage into tables in the target data system. Logic is included to handle Full, Incremental, and Log file types.
+* **`load_data.py`**: This script facilitates loading the direct data extracts from object storage into tables in the target data system. Logic is included to handle Full, Incremental, and Log file types.
 
 ![load-data](images/load-data.png)
 
-* **`extract_doc_content.py`**: This script retrieves the doc version IDs from the Full or Incremental document_version_sys.csv file, calls the Export Document Versions endpoint to export document content to File Staging, then downloads the content from File Staging and uploads to Object Storage.
+* **`extract_doc_content.py`**: This script retrieves the doc version IDs from the Full or Incremental document_version_sys.csv file, calls the Export Document Versions endpoint to export document content to File Staging, then downloads the content from File Staging and uploads to object storage.
 
 ![extract-doc-content](images/extract-doc-content.png)
+
+* **`retrieve_doc_text.py`**: This script retrieves the doc version IDs from the Full or Incremental document_version_sys.csv file, calls the Retrieve Document Version Text endpoint, then saves the content to a text file in object storage.
+
+![retrieve_doc_text](images/retrieve_doc_text.png)
 
 ## Implementations
 
 To use the Direct Data accelerators, see the following prerequisites. Individual implementations will have additional prerequisites.
-* [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed
 * [Python v3.10 or higher](https://www.python.org/downloads/)
 
 The following accelerator implementations are currently available as working examples.
@@ -178,12 +195,17 @@ This accelerator leverages the ability to integrate Snowflake with S3 and seamle
 ![snowflake-accelerator](images/snowflake-accelerator.png)
 
 **Pre-requisites**
+* [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 * [S3 to Snowflake integration](https://docs.snowflake.com/en/user-guide/data-load-s3-config-storage-integration)
 * [S3 Stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage)
 * The following must be present:
     * [Database](https://docs.snowflake.com/en/sql-reference/sql/create-database)
     * [Schema](https://docs.snowflake.com/en/sql-reference/sql/create-schema)
     * A [role](https://docs.snowflake.com/en/sql-reference/sql/create-role) with desired permissions
+  
+**Supported File Formats**
+* CSV
+* PARQUET
 
 ### Databricks Accelerator
 
@@ -192,23 +214,67 @@ There are [several ways](https://docs.databricks.com/aws/en/ingestion/) to handl
 ![databricks-accelerator](images/databricks-accelerator.png)
 
 **Pre-requisites**
+* [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 * [Configure data access for ingestion](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/copy-into/configure-data-access)
 * The following must be present:
     * [Catalog](https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-syntax-ddl-create-catalog)
     * [Schema](https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-syntax-ddl-create-schema)
+
+**Supported File Formats**
+* CSV
 
 **Considerations**
 * The data that gets loaded into Delta Lake tables are loaded as a String data type.
 
 ### Redshift Accelerator
 
-Similar to the other accelerators, the Redshift accelerator leverages the [`COPY`](https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html) command to load data into tables from S3. Redshift does allow loading using CSV and PARQUET formats, but the schemas cannot be inferred. Therefore, the table schemas will always be handled manually.
+Similar to the other accelerators, the Redshift accelerator leverages the [`COPY`](https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html) command to load data into tables from S3.
 
 ![redshift-accelerator](images/redshift-accelerator.png)
 
 **Pre-requisites**
+* [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 * [Appropriate permissions and access to Redshift and S3](https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html#r_COPY-permissions)
+
+**Supported File Formats**
+* CSV
 
 **Considerations**
 * Amazon Redshift [character type](https://docs.aws.amazon.com/redshift/latest/dg/r_Character_types.html) has a limit of 65535 bytes.
 * Due to this limit, some Rich Text field data may be truncated.
+
+### SQL Database Accelerator
+
+The SQL Database accelerator leverages the [`BULK INSERT`](https://learn.microsoft.com/en-us/sql/t-sql/statements/bulk-insert-transact-sql?view=sql-server-ver17) command to load data into tables from Blob Storage.
+
+![sql-database-accelerator](images/sql-database-accelerator.png)
+
+**Pre-requisites**
+* [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#storage-accounts)
+* [Blob Container](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers)
+* [Master Key](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-master-key-transact-sql?view=sql-server-ver17)
+* [Storage Access Signature](https://learn.microsoft.com/en-us/rest/api/storageservices/delegate-access-with-shared-access-signature)
+* [Database Scoped Credential](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-database-scoped-credential-transact-sql?view=sql-server-ver17)
+* [External Data Source](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-external-data-source-transact-sql?view=azuresqldb-current&preserve-view=true&tabs=dedicated)
+
+**Supported File Formats**
+* CSV
+
+**Considerations**
+* Boolean values from Vault are loaded as an NVARCHAR data type.
+
+### Fabric Warehouse Accelerator
+
+The Fabric accelerator leverages the [`COPY INTO`](https://learn.microsoft.com/en-us/sql/t-sql/statements/copy-into-transact-sql?view=fabric&preserve-view=true) command to load data into tables from Blob Storage.
+
+![fabric-accelerator](images/fabric-accelerator.png)
+
+**Pre-requisites**
+* [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#storage-accounts)
+* [Blob Container](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers)
+* [Fabric Workspace](https://learn.microsoft.com/en-us/fabric/fundamentals/workspaces)
+* [Fabric Warehouse](https://learn.microsoft.com/en-us/fabric/data-warehouse/data-warehousing)
+
+**Supported File Formats**
+* CSV
+* PARQUET

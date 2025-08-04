@@ -77,6 +77,7 @@ class DocumentRequest(VaultRequest):
     _URL_DOC_VERSIONS: str = '/objects/documents/{doc_id}/versions'
     _URL_DOC_VERSION: str = '/objects/documents/{doc_id}/versions/{major_version}/{minor_version}'
     _URL_DOC_FILE: str = '/objects/documents/{doc_id}/file'
+    _URL_DOC_TEXT: str = '/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/text'
     _URL_DOC_VERSION_FILE: str = '/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/file'
     _URL_DOC_VERSION_THUMBNAIL: str = '/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/thumbnail'
     _URL_DOCS_BATCH: str = '/objects/documents/batch'
@@ -637,6 +638,48 @@ class DocumentRequest(VaultRequest):
             ```
         """
         endpoint = self.get_api_endpoint(endpoint=self._URL_DOC_VERSION_THUMBNAIL)
+        endpoint = endpoint.replace('{doc_id}', str(doc_id))
+        endpoint = endpoint.replace('{major_version}', str(major_version))
+        endpoint = endpoint.replace('{minor_version}', str(minor_version))
+
+        self._response_option = _ResponseOption.BYTES
+
+        return self._send(http_method=HttpMethod.GET,
+                          url=endpoint,
+                          response_class=VaultResponse)
+
+    def retrieve_document_version_text(self, doc_id: int, major_version: int, minor_version: int) -> VaultResponse:
+        """
+        **Retrieve Document Version Text**
+
+        Download the plain text of a specific document version.
+
+        Args:
+            doc_id (int): The document ID.
+            major_version (int): The major version number.
+            minor_version (int): The minor version number.
+
+        Returns:
+            VaultResponse: Modeled response from Vault
+
+        Vault API Endpoint:
+            GET /api/{version}/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/text
+
+        Vault API Documentation:
+            [https://developer.veevavault.com/api/25.2/#download-document-text](https://developer.veevavault.com/api/25.2/#download-document-text)
+
+        Example:
+            ```python
+            # Example Request
+            request: DocumentRequest = vault_client.new_request(request_class=DocumentRequest)
+            response: VaultResponse = request.download_document_text(
+                doc_id=doc_id, major_version=major_version, minor_version=minor_version)
+
+            # Example Response
+            print(f'Document Text: {str(response.binary_content, "utf-8")}')
+            ```
+        """
+        endpoint = self.get_api_endpoint(endpoint=self._URL_DOC_TEXT)
         endpoint = endpoint.replace('{doc_id}', str(doc_id))
         endpoint = endpoint.replace('{major_version}', str(major_version))
         endpoint = endpoint.replace('{minor_version}', str(minor_version))

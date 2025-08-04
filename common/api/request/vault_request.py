@@ -7,10 +7,12 @@ from abc import ABC
 from enum import Enum
 from typing import Any, Dict
 
+import requests
 from pydantic.dataclasses import dataclass
 from pydantic.fields import Field
 
 from ..connector import http_request_connector
+from ..model.response.vault_response import VaultResponse
 
 
 class _ParamType(Enum):
@@ -32,6 +34,7 @@ class _RequestOption(Enum):
     # Attributes:
     #     EMPTY (RequestOption): Represents an empty request option
     #     BYTES (RequestOption): Represents a request option for handling raw bytes
+    #     STRING (RequestOption): Represents a request option for handling a raw string, such as a JSON response
 
     EMPTY = 'EMPTY'
     BYTES = 'BYTES'
@@ -50,6 +53,19 @@ class _ResponseOption(Enum):
     BYTES = 'BYTES'
 
 
+class ContentType(Enum):
+    """
+    Enumeration class representing Content Types for Document Requests.
+
+    Attributes:
+        CSV (str): Content Type CSV
+        JSON (str): Content Type JSON
+    """
+
+    CSV: str = 'text/csv'
+    JSON: str = 'application/json'
+
+
 @dataclass
 class VaultRequest(ABC):
     """
@@ -65,34 +81,36 @@ class VaultRequest(ABC):
             the Reference ID is returned in the response headers of the returned Response class.
     """
 
-    VAULT_API_VERSION: str = 'v25.1'
+    VAULT_API_VERSION: str = 'v25.2'
     HTTP_HEADER_AUTHORIZATION: str = 'Authorization'
     HTTP_HEADER_VAULT_CLIENT_ID: str = 'X-VaultAPI-ClientID'
     HTTP_HEADER_REFERENCE_ID: str = "X-VaultAPI-ReferenceId"
     reference_id: str = None
 
-    _header_params: Dict[str, Any] = Field(default_factory=dict, alias="header_params")
-    _body_params: Dict[Any, Any] = Field(default_factory=dict, alias="body_params")
-    _query_params: Dict[str, Any] = Field(default_factory=dict, alias="query_params")
-    _file_params: Dict[str, Any] = Field(default_factory=dict, alias="file_params")
-    _request_raw_string: str = Field(default=None, alias="request_raw_string")
-    _binary_content: bytes = Field(default=None, alias="binary_content")
-    _vault_dns: str = Field(default=None, alias="vault_dns")
-    _vault_username: str = Field(default=None, alias="vault_username")
-    _vault_password: str = Field(default=None, alias="vault_password")
-    _vault_client_id: str = Field(default=None, alias="vault_client_id")
-    _http_timeout: int = Field(default=60, alias="http_timeout")
-    _set_log_api_errors: bool = Field(default=True, alias="set_log_api_errors")
-    _idp_oauth_access_token: str = Field(default=None, alias="idp_oauth_access_token")
-    _idp_oauth_scope: str = Field(default='openid', alias="idp_oauth_scope")
-    _idp_password: str = Field(default=None, alias="idp_password")
-    _idp_username: str = Field(default=None, alias="idp_username")
-    _idp_client_id: str = Field(default=None, alias="idp_client_id")
-    _set_validate_session: bool = Field(default=True, alias="set_validate_session")
-    _vault_oauth_client_id: str = Field(default=None, alias="vault_oauth_client_id")
-    _vault_oauth_profile_id: str = Field(default=None, alias="vault_oauth_profile_id")
-    _vault_session_id: str = Field(default=None, alias="vault_session_id")
-    _request_option: _RequestOption = Field(default=_RequestOption.EMPTY, alias="request_option")
+    _header_params: Dict[str, Any] = Field(default_factory=dict)
+    _body_params: Dict[Any, Any] = Field(default_factory=dict)
+    _query_params: Dict[str, Any] = Field(default_factory=dict)
+    _file_params: Dict[str, Any] = Field(default_factory=dict)
+    _binary_content: bytes = None
+    _request_raw_string: str = None
+
+    _vault_dns: str = None
+    _vault_username: str = None
+    _vault_password: str = None
+    _vault_client_id: str = None
+    _http_timeout: int = 60
+    _set_log_api_errors: bool = True
+    _idp_oauth_access_token: str = None
+    _idp_oauth_scope: str = 'openid'
+    _idp_password: str = None
+    _idp_username: str = None
+    _idp_client_id: str = None
+    _set_validate_session: bool = True
+    _vault_oauth_client_id: str = None
+    _vault_oauth_profile_id: str = None
+    _vault_session_id: str = None
+    _request_option: _RequestOption = _RequestOption.EMPTY
+    _response_option: _ResponseOption = _ResponseOption.STRING
 
     def _send(self, http_method: http_request_connector.HttpMethod,
               url: str,
@@ -111,13 +129,38 @@ class VaultRequest(ABC):
 
         self._set_vault_header_params()
         body = self._get_request_body()
-        response_dict = http_request_connector.send(http_method=http_method,
-                                                    url=url,
-                                                    query_params=self._query_params,
-                                                    body=body,
-                                                    headers=self._header_params,
-                                                    files=self._file_params)
-        return self._process_response(response_dict=response_dict, response_class=response_class)
+        http_response: requests.Response = http_request_connector.send(http_method=http_method,
+                                                                       url=url,
+                                                                       query_params=self._query_params,
+                                                                       body=body,
+                                                                       headers=self._header_params,
+                                                                       files=self._file_params)
+        return self._process_response(http_response=http_response, response_class=response_class)
+
+    # def _send_return_binary(self, http_method: http_request_connector.HttpMethod,
+    #                         url: str,
+    #                         response_class: Any) -> Any:
+    #     # Send an HTTP request with standard Vault information set, such as the session id.
+    #     # This method acts as a wrapper to http_request_connector, providing a central
+    #     # location for setting information and processing the response.
+    #     #
+    #     # Args:
+    #     #     http_method (http_request_connector.HttpMethod): The HTTP method for the request
+    #     #     url (str): The URL for the HTTP request
+    #     #     response_class (Any): The class to use for deserializing the response
+    #     #
+    #     # Returns:
+    #     #     Any: The processed response as a Response Class from the HTTP request
+    #
+    #     self._set_vault_header_params()
+    #     body = self._get_request_body()
+    #     response_dict = http_request_connector.send(http_method=http_method,
+    #                                                 url=url,
+    #                                                 query_params=self._query_params,
+    #                                                 body=body,
+    #                                                 headers=self._header_params,
+    #                                                 files=self._file_params)
+    #     return self._process_response(response_dict=response_dict, response_class=response_class)
 
     def _set_vault_header_params(self):
         # Set the HTTP header with standard Vault header parameters
@@ -132,8 +175,8 @@ class VaultRequest(ABC):
         if self.reference_id is not None and self.reference_id != '':
             self._header_params[self.HTTP_HEADER_REFERENCE_ID] = self.reference_id
 
-    @staticmethod
-    def _process_response(response_dict: Dict[str, str], response_class: Any) -> Any:
+    def _process_response(self, http_response: requests.Response,
+                          response_class: Any) -> Any:
         # Deserialize the JSON response from the HTTP request to Python Response object.
         #
         # Args:
@@ -143,13 +186,29 @@ class VaultRequest(ABC):
         # Returns:
         #     Any: The processed response as a Response Class
 
-        if http_request_connector.HTTP_CONTENT_TYPE_OCTET in response_dict['content_type']:
-            response_object = response_class(binary_content=response_dict['binary_content'])
-            response_object.binary_content = response_dict['binary_content']
+        response_dict: Dict = {}
+        response_dict['status_code'] = http_response.status_code
+        response_dict['headers'] = http_response.headers
+        response_dict['content_type'] = http_response.headers.get('Content-Type')
+
+        if self._response_option == _ResponseOption.BYTES or self._response_option == _ResponseOption.TO_FILE:
+
+            # if the contentType is JSON, it means there is an inner JSON error returned by Vault API
+            if 'application/json' in response_dict['content_type']:
+                response_dict['response'] = http_response.text
+                data = json.loads(response_dict['response'])
+                response_object = VaultResponse(**data)
+                response_object.response = response_dict['response']
+            else:
+                response_dict['binary_content'] = http_response.content
+                response_object = response_class(binary_content=response_dict['binary_content'])
+                response_object.binary_content = response_dict['binary_content']
         else:
+            response_dict['response'] = http_response.text
             data = json.loads(response_dict['response'])
             response_object = response_class(**data)
             response_object.response = response_dict['response']
+
         response_object.headers = dict(response_dict['headers'])
         return response_object
 
@@ -177,15 +236,6 @@ class VaultRequest(ABC):
         #     value (Any): The value of the parameter
         self._add_param(param_type=_ParamType.QUERY, key=key, value=value)
 
-    def _add_raw_string(self, raw_string: str):
-        # Add a string to the request, such as POST of raw data
-        #
-        # Args:
-        #     raw_string (str): The raw string to be included in the request
-
-        self._request_option = _RequestOption.STRING
-        self._request_raw_string = raw_string
-
     def _add_file_multipart(self, param_name: str, file_path: str):
         # Add a file parameter for multipart/form-data in the request.
         #
@@ -194,6 +244,15 @@ class VaultRequest(ABC):
         #     file_path (str): The path to the file to be included
 
         self._file_params[param_name] = file_path
+
+    def _add_raw_string(self, raw_string: str):
+        # Add a string to the request, such as POST of raw data
+        #
+        # Args:
+        #     raw_string (str): The raw string to be included in the request
+
+        self._request_option = _RequestOption.STRING
+        self._request_raw_string = raw_string
 
     def _add_param(self, param_type: _ParamType, key: str, value: Any):
         # Add a parameter to the request.

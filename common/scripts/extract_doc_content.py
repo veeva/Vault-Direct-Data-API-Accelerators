@@ -5,7 +5,7 @@ from pandas import Series
 
 import pyrfc6266
 
-from common.services.aws_s3_service import AwsS3Service
+from common.services.object_storage_service import ObjectStorageService
 from common.services.vault_service import VaultService
 from common.api.model.response.document_response import DocumentExportResponse
 from common.api.model.response.jobs_response import JobCreateResponse
@@ -25,25 +25,25 @@ def batch_document_list(data_list: List[Any], batch_size: int) -> Generator[List
     for i in range(0, len(data_list), batch_size):
         yield data_list[i:i + batch_size]
 
-def run(s3_service: AwsS3Service, vault_service: VaultService, convert_to_parquet: bool):
+
+def run(object_storage_service: ObjectStorageService, vault_service: VaultService):
     log_message(log_level='Info',
                 message=f'---Executing extract_doc_content.py---')
 
-    starting_directory = f"{s3_service.direct_data_folder}/{s3_service.extract_folder}"
+    starting_directory = f"{object_storage_service.direct_data_folder}/{object_storage_service.extract_folder}"
     file_extension = '.csv'
-    if convert_to_parquet or convert_to_parquet == "true":
+    if object_storage_service.convert_to_parquet:
         file_extension = '.parquet'
 
     document_filepath: str = f"{starting_directory}/Document/document_version__sys{file_extension}"
     log_message(log_level='Info',
-                message=f'Retrieving document version file from s3://{document_filepath}')
+                message=f'Retrieving document version file from Object Storage')
 
+    # Check if the file exists in Object Storage
+    object_storage_service.check_if_object_exists(object_path=document_filepath)
 
-    # Check if the file exists in S3
-    s3_service.head_object(key=f"{document_filepath}")
-
-    # Download the file from S3
-    s3_service.download_file(document_filepath, document_filepath)
+    # Download the file from Object Storage to local
+    object_storage_service.download_object_to_local(object_path=document_filepath, output_path=document_filepath)
 
     if file_extension == '.parquet':
         document_table = pq.read_table(document_filepath).to_pandas()
@@ -52,7 +52,8 @@ def run(s3_service: AwsS3Service, vault_service: VaultService, convert_to_parque
 
     total_doc_versions: List[str] = document_table['version_id']
     document_version_list: Series = total_doc_versions[document_table['size__v'].notna()]
-    direct_data_folder = f"{s3_service.direct_data_folder}/{s3_service.extract_folder}/{s3_service.document_content_folder}"
+    direct_data_folder = f"{object_storage_service.direct_data_folder}/{object_storage_service.extract_folder}/{object_storage_service.document_content_folder}"
+    security_profile: str = vault_service.get_user_security_profile()
 
     document_batches = batch_document_list(document_version_list.tolist(), 10000)
 
@@ -94,12 +95,12 @@ def run(s3_service: AwsS3Service, vault_service: VaultService, convert_to_parque
 
                         # If the individual document export was successful, download it and put on S3.
                         if exported_document.responseStatus == "SUCCESS":
-                            file_staging_response: VaultResponse = vault_service.download_item_from_file_staging(exported_document=exported_document)
+                            file_staging_response: VaultResponse = vault_service.download_item_from_file_staging(exported_document=exported_document,
+                                                                                                                 security_profile=security_profile)
                             filename: str = pyrfc6266.parse_filename(file_staging_response.headers.get("Content-Disposition"))
-                            log_message(log_level='Debug',
-                                        message=f'File Staging results: {file_staging_response.responseMessage}')
-                            s3_service.put_object(key=f'{direct_data_folder}/{exported_document.id}/{exported_document.major_version_number__v}_{exported_document.minor_version_number__v}/{filename}',
-                                                  body=file_staging_response.binary_content)
+                            object_storage_service.upload_object(
+                                object_path=f'{direct_data_folder}/{exported_document.id}/{exported_document.major_version_number__v}_{exported_document.minor_version_number__v}/{filename}',
+                                data=file_staging_response.binary_content)
                     is_vault_job_finished = True
                 else:
                     log_message(log_level='Debug',
@@ -110,5 +111,3 @@ def run(s3_service: AwsS3Service, vault_service: VaultService, convert_to_parque
             log_message(log_level='Error',
                         message=f'Error when attempting to download document',
                         exception=e)
-
-

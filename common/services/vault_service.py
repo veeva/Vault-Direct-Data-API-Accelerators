@@ -7,9 +7,11 @@ from common.api.model.response.direct_data_response import DirectDataResponse
 from common.api.model.response.document_response import DocumentExportResponse
 from common.api.model.response.jobs_response import JobCreateResponse
 from common.api.model.response.vault_response import VaultResponse
+from common.api.model.response.query_response import QueryResponse
 from common.api.request.direct_data_request import DirectDataRequest, ExtractType
 from common.api.request.document_request import DocumentRequest
 from common.api.request.file_staging_request import FileStagingRequest
+from common.api.request.query_request import QueryRequest
 from common.utilities import log_message
 
 
@@ -21,10 +23,10 @@ class VaultService:
             VaultService._vault_client = VaultClient.authenticate_from_settings_file(
                 file_path=vapil_settings_filepath)
 
-    def retrieve_available_direct_data_files(self, extract_type: str, start_time: str, stop_time: str) -> DirectDataResponse:
+    def retrieve_available_direct_data_files(self, extract_type: str, start_time: str,
+                                             stop_time: str) -> DirectDataResponse:
         log_message(log_level='Debug',
-                    message=f'Listing Direct Data files with start time: {start_time} and stop time: {stop_time}',
-                    context=None)
+                    message=f'Listing Direct Data files with start time: {start_time} and stop time: {stop_time}')
         try:
             request: DirectDataRequest = self._vault_client.new_request(DirectDataRequest)
             response: DirectDataResponse = request.retrieve_available_direct_data_files(
@@ -36,24 +38,21 @@ class VaultService:
             if response.is_failure() or not bool(response.data):
                 raise Exception('Error retrieving Direct Data files')
             log_message(log_level='Info',
-                        message='Direct Data files listed successfully',
-                        context=None)
+                        message='Direct Data files listed successfully')
             return response
 
         except Exception as e:
             log_message(log_level='Error',
                         message=f'Exception when listing Direct Data files',
-                        exception=e,
-                        context=None)
+                        exception=e)
             raise e
 
-    def download_direct_data_file(self, name: str, filepart: int) -> VaultResponse:
+    def download_direct_data_file(self, name: str) -> VaultResponse:
         log_message(log_level='Debug',
                     message=f'Downloading Direct Data file: {name}')
         try:
             request: DirectDataRequest = self._vault_client.new_request(DirectDataRequest)
-            response: VaultResponse = request.download_direct_data_file(
-                name=name, filepart=filepart)
+            response: VaultResponse = request.download_direct_data_file(name=name)
 
             if response.has_errors():
                 raise Exception(response.errors[0].message)
@@ -79,6 +78,17 @@ class VaultService:
 
         if response.has_errors():
             raise Exception(response.errors[0].message)
+
+        return response
+
+    def retrieve_document_version_text(self, doc_id: int, major_version: int, minor_version: int) -> VaultResponse:
+        log_message(log_level='Debug',
+                    message=f'Downloading document text for Document ID: {doc_id}, Major Version: {major_version}, Minor Version: {minor_version}')
+
+        request: DocumentRequest = self._vault_client.new_request(DocumentRequest)
+        response: VaultResponse = request.retrieve_document_version_text(doc_id=doc_id,
+                                                                         major_version=major_version,
+                                                                         minor_version=minor_version)
 
         return response
 
@@ -110,14 +120,20 @@ class VaultService:
                         exception=e)
             raise e
 
-    def download_item_from_file_staging(self, exported_document: DocumentExportResponse.ExportedDocument) -> VaultResponse:
+    def download_item_from_file_staging(self, exported_document: DocumentExportResponse.ExportedDocument,
+                                        security_profile: str) -> VaultResponse:
         log_message(log_level='Debug',
                     message=f'File Path on Staging Server: {exported_document.file}')
         file_staging_request: FileStagingRequest = self._vault_client.new_request(FileStagingRequest)
         log_message(log_level='Debug',
                     message=f'File Staging Request: {file_staging_request}')
 
-        path_object = Path(f'u{exported_document.user_id__v}{exported_document.file}')
+        # Root folder for Vault Owners and System Admins is File Staging root. Otherwise, it is the user's folder.
+        if security_profile in ['vault_owner__v', 'system_admin__v']:
+            path_object = Path(f'u{exported_document.user_id__v}{exported_document.file}')
+        else:
+            path_object = Path(f'{exported_document.file.lstrip("/")}')
+
         file_path_posix = path_object.as_posix()
         encoded_file_path = urllib.parse.quote(file_path_posix)
 
@@ -125,3 +141,24 @@ class VaultService:
             item=encoded_file_path)
 
         return file_staging_response
+
+    def get_user_security_profile(self) -> str | None:
+        log_message(log_level='Debug',
+                    message='Retrieving User Security Profile')
+        try:
+            query_request: QueryRequest = self._vault_client.new_request(QueryRequest)
+            query_response: QueryResponse = query_request.query(
+                f'SELECT security_profile__v FROM users WHERE id = {self._vault_client.authentication_response.userId}')
+            if query_response.is_failure():
+                log_message(log_level='Warning',
+                            message='Failure querying for security profile')
+                return None
+            if query_response.is_successful():
+                log_message(log_level='Debug',
+                            message=f'Retrieved User Security Profile: {query_response.data[0].security_profile__v}')
+                return query_response.data[0].security_profile__v
+        except Exception as e:
+            log_message(log_level='Error',
+                        message='Error retrieving security profile',
+                        exception=e)
+            raise e

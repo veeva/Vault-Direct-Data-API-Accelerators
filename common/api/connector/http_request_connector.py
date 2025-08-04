@@ -22,6 +22,7 @@ Attributes:
 """
 
 import logging
+import os
 from enum import Enum
 from typing import Dict, Any
 
@@ -65,7 +66,7 @@ def send(http_method: HttpMethod,
          query_params: Dict = {},
          body: Any = None,
          headers: Dict = {},
-         files: Dict = {}) -> Dict:
+         files: Dict = {}) -> requests.Response:
     """
     Perform an HTTP call based on the arguments provided
     (url, query_params, body, headers, files)
@@ -83,46 +84,30 @@ def send(http_method: HttpMethod,
         Dict: Attributes from the HTTP response as a Dict
     """
 
-    files_dict: Dict = {}
-    if files.__len__() > 0:
-        for key, value in files.items():
-            with open(value, 'rb') as file:
-                files_dict[key] = file.read()
+    files_to_send = {}
+    opened_files_for_requests = []
+    if files:
+        try:
+            for field_name, file_path in files.items():
+                filename = os.path.basename(file_path)
+                file_object = open(file_path, 'rb')
+                opened_files_for_requests.append(file_object) # Add to list
+                files_to_send[field_name] = (filename, file_object)
+        except Exception as e:
+            # Clean up opened files if dictionary preparation fails
+            for f_obj in opened_files_for_requests:
+                f_obj.close()
+            _LOGGER.error(f"Error preparing files for upload: {e}")
+            raise requests.RequestException("Error preparing files for upload")
 
-    response_dict: Dict = {}
     try:
         http_response = requests.request(method=http_method.value,
                                          url=url,
                                          params=query_params,
                                          data=body,
                                          headers=headers,
-                                         files=files_dict)
-        response_dict: {} = _process_response(http_response=http_response)
-        status_code: int = response_dict['status_code']
-        _LOGGER.debug(f'HTTP status code = {status_code}')
-        if status_code > 299:
-            _LOGGER.error(f'Error status code = {status_code}')
+                                         files=files_to_send)
     except Exception as e:
         _LOGGER.error(e)
         raise requests.RequestException("HTTP request failed")
-    return response_dict
-
-
-def _process_response(http_response: requests.Response) -> Dict:
-    # Process an HTTP response into a dictionary.
-    #
-    # Args:
-    #    http_response (requests.Response): The HTTP response object to be processed
-    #
-    # Returns:
-    #    Dict: A dictionary containing HTTP response information
-
-    response_dict: Dict = {}
-    response_dict['status_code'] = http_response.status_code
-    response_dict['headers'] = http_response.headers
-    response_dict['content_type'] = http_response.headers.get('Content-Type')
-    if HTTP_CONTENT_TYPE_OCTET in response_dict['content_type']:
-        response_dict['binary_content'] = http_response.content
-    else:
-        response_dict['response'] = http_response.text
-    return response_dict
+    return http_response

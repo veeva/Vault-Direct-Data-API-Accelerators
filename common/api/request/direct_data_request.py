@@ -6,7 +6,7 @@ from enum import Enum
 from ..connector.http_request_connector import HttpMethod
 from ..model.response.direct_data_response import DirectDataResponse
 from ..model.response.vault_response import VaultResponse
-from ..request.vault_request import VaultRequest
+from ..request.vault_request import VaultRequest, _ResponseOption
 
 
 class ExtractType(Enum):
@@ -29,8 +29,8 @@ class DirectDataRequest(VaultRequest):
     Class that defines methods used to call Direct Data endpoints.
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.1/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/24.1/#retrieve-available-direct-data-files)
-        [https://developer.veevavault.com/api/24.1/#download-direct-data-file](https://developer.veevavault.com/api/24.1/#download-direct-data-file)
+        [https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files)
+        [https://developer.veevavault.com/api/25.2/#download-direct-data-file](https://developer.veevavault.com/api/25.2/#download-direct-data-file)
     """
 
     _URL_LIST_ITEMS: str = '/services/directdata/files'
@@ -60,7 +60,7 @@ class DirectDataRequest(VaultRequest):
             GET /api/{version}/services/directdata/files
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.1/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/24.1/#retrieve-available-direct-data-files)
+            [https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files)
 
         Example:
             ```python
@@ -70,6 +70,7 @@ class DirectDataRequest(VaultRequest):
                                                               start_time=start_time,
                                                               stop_time=stop_time)
 
+            # Example Response
             for item in response.data:
                 print('-----Item-----')
                 print(f'Name: {item.name}')
@@ -102,8 +103,7 @@ class DirectDataRequest(VaultRequest):
                           url=endpoint,
                           response_class=DirectDataResponse)
 
-    def download_direct_data_file(self, name: str,
-                                  filepart: int = None) -> VaultResponse:
+    def download_direct_data_file(self, name: str) -> VaultResponse:
         """
         **Download Direct Data File**
 
@@ -111,7 +111,6 @@ class DirectDataRequest(VaultRequest):
 
         Args:
             name: Name of the file to download
-            filepart: Filepart number to download
 
         Returns:
           VaultResponse: Modeled response from Vault
@@ -120,7 +119,7 @@ class DirectDataRequest(VaultRequest):
             GET /api/{version}/services/directdata/files/{name}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.1/#download-direct-data-file](https://developer.veevavault.com/api/24.1/#download-direct-data-file)
+            [https://developer.veevavault.com/api/25.2/#download-direct-data-file](https://developer.veevavault.com/api/25.2/#download-direct-data-file)
 
         Example:
             ```python
@@ -136,7 +135,7 @@ class DirectDataRequest(VaultRequest):
         endpoint = self.get_api_endpoint(endpoint=self._URL_DOWNLOAD_ITEM)
         endpoint = endpoint.replace('{name}', name)
 
-        self._add_query_param('filepart', filepart)
+        self._response_option = _ResponseOption.BYTES
 
         return self._send(http_method=HttpMethod.GET,
                           url=endpoint,

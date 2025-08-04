@@ -45,23 +45,6 @@ def read_json_file(file_path: str) -> dict:
         return {}
 
 
-def import_libraries(file_path: str):
-    try:
-        with open(file_path, 'r') as file:
-            libraries = file.read().splitlines()
-
-        for library in libraries:
-            if library.strip():  # Ignore empty lines
-                try:
-                    importlib.import_module(library)
-                    print(f"Successfully imported {library}")
-                except ImportError:
-                    print(f"Error: Could not import {library}. Is it installed?")
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
-        sys.exit(1)
-
-
 def update_table_name_that_starts_with_digit(table_name: str) -> str:
     """
     This method handles reconciling Vault objects that begin with a number and appending a 'n_' so that Redshift will
@@ -73,3 +56,26 @@ def update_table_name_that_starts_with_digit(table_name: str) -> str:
         return f'n_{table_name}'
     else:
         return table_name
+
+def convert_file_to_table(file_path: str, convert_to_parquet: bool) -> pd.DataFrame | pa.Table:
+    """
+    Converts a file to a table data structure.
+
+    :param file_path: Path to the file.
+    :param convert_to_parquet: If True, the file will be read as a Parquet file; otherwise, it will be read as a CSV.
+
+    :return: A Pandas DataFrame or Pyarrow Table containing the data from the manifest file.
+    """
+
+    log_message(log_level='Info',
+                message=f'Converting file to table structure: {file_path}')
+    try:
+        if convert_to_parquet:
+            return pq.read_table(source=file_path).to_pandas()
+        else:
+            return pd.read_csv(filepath_or_buffer=file_path)
+    except Exception as e:
+        log_message(log_level='Error',
+                    message=f'Error converting file to table: {file_path}',
+                    exception=e)
+        return None

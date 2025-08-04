@@ -1,0 +1,17 @@
+{
+  "authenticationType": "BASIC",
+  "idpOauthAccessToken": "",
+  "idpOauthScope": "openid",
+  "idpUsername": "",
+  "idpPassword": "",
+  "vaultUsername": "integration.user@cholecap.com",
+  "vaultPassword": "Password123",
+  "vaultDNS": "cholecap.veevavault.com",
+  "vaultSessionId": "",
+  "vaultClientId": "Cholecap-Vault-Direct-Data-Accelerator",
+  "vaultOauthClientId": "",
+  "vaultOauthProfileId": "",
+  "logApiErrors": true,
+  "httpTimeout": null,
+  "validateSession": true
+}

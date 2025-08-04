@@ -1,0 +1,25 @@
+{
+  "convert_to_parquet": false,
+  "extract_document_content" : true,
+  "retrieve_document_text" : true,
+  "blob": {
+    "role": "Azure-Role",
+    "account_url": "https://mystorageaccount.blob.core.windows.net/",
+    "container": "veeva-vault",
+    "direct_data_folder": "vault/direct-data",
+    "archive_filepath": "vault/direct-data/232635-20250703-0000-F.tar.gz",
+    "extract_folder": "232635-20250703-0000-F",
+    "document_content_folder": "document_content",
+    "document_text_folder": "document_text"
+  },
+  "sql_database": {
+    "connection_string": "Driver={ODBC Driver 18 for SQL Server};Server=tcp:{server_name},1433;Database={database};Uid={user};Pwd={password};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;",
+    "server_name": "cholecap.database.windows.net",
+    "port": "5439",
+    "user": "admin",
+    "password": "Password123",
+    "database": "dev",
+    "schema": "direct_data",
+    "external_data_source": "AzureBlobContainerDataSource"
+  }
+}

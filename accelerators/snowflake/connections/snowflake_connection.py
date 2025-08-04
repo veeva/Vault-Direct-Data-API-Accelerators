@@ -44,7 +44,7 @@ class SnowflakeConnection(DatabaseConnection):
                 raise ValueError("Private key passphrase must be provided for encrypted key.")
 
             # Use the Snowflake connection
-            conn = snowflake.connector.connect(
+            conn: SnowflakeConnection = snowflake.connector.connect(
                 user=self.username,
                 account=self.account,
                 warehouse=self.warehouse,
@@ -61,20 +61,23 @@ class SnowflakeConnection(DatabaseConnection):
         except snowflake.connector.errors.OperationalError as e:
             raise Exception(f"Failed to connect to Snowflake: {e}")
 
-    def close(self):
-        if self.connected:
-            self.con.close()
-            self.connected = False
-
     def execute_query(self, query: str):
         if not self.connected:
             self.open()
             self.cursor = self.con.cursor()
+
         log_message(
             log_level='Info',
             message=f"Executing query: {query}", )
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        try:
+            self.cursor.execute(query)
+            return self.cursor.fetchall()
+        except snowflake.connector.errors.ProgrammingError as e:
+            log_message(
+                log_level='Exception',
+                message=f"Executing query: {query}",
+                exception=e)
+            return []
 
     def activate_cursor(self):
         if self.connected:
