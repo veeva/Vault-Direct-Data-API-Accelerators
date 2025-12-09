@@ -16,6 +16,7 @@ This project provides accelerator implementations that facilitate the loading of
 * Vault -> AWS S3 -> Redshift
 * Vault -> Azure Blob Storage -> Azure SQL Database
 * Vault -> Azure Blob Storage -> Microsoft Fabric Warehouse
+* Vault -> Local Storage -> SQLite (See the [SQLite Accelerator](#sqlite-accelerator) section for more details on this implementation)
 
 These accelerators perform the following fundamental processes:
 * Download Direct Data files from Vault and upload them to object storage (currently AWS S3 or Azure Blob Storage)
@@ -278,3 +279,35 @@ The Fabric accelerator leverages the [`COPY INTO`](https://learn.microsoft.com/e
 **Supported File Formats**
 * CSV
 * PARQUET
+
+### SQLite Accelerator
+
+The SQLite Accelerator leverages the [Pandas Python library](https://pandas.pydata.org/pandas-docs/version/2.2/index.html) and the [Dataframe#to_sql()](https://pandas.pydata.org/pandas-docs/version/2.2/reference/api/pandas.DataFrame.to_sql.html) command to load
+data from the CSV files into a local SQLite database.
+
+![sqlite-accelerator](images/sqlite-accelerator.png)
+
+The SQLite Accelerator differs from the other Accelerators, because the files and database are stored locally. The specific implementation details are below.
+
+**Architecture**
+
+This accelerator performs the following fundamental processes:
+* Download a Direct Data file from Vault and save it to local storage
+* Extract content from the local Direct Data file
+* Load the CSV data into a SQLite database
+
+The following classes are being leveraged by the SQLite Accelerator:
+* **`VaultService`**: This class handles all interactions with Vault. This primarily consists of executing API calls (e.g., authentication, listing and downloading direct Data files).
+* **`DatabaseService`**: This class handles interactions with the sqlite database. This includes loading Full, Incremental, and Log files. Table schemas are managed here as well.
+* **`DatabaseConnection`**: This class handles connecting to the sqlite database, activating a database cursor, and executing SQL commands. This is utilized by the `DatabaseService` execute the specific database SQL commands.
+
+The logic that moves and transforms data between systems is handled in the included scripts.
+* **`download_direct_data_file.py`**: This script handles downloading a designated Direct Data file from Vault to local storage. This script handles multiple file parts natively.
+* **`unzip_direct_data_file.py`**: This script handles unzipping a local Direct Data File.
+* **`load_data.py`**: This script facilitates loading the direct data extracts into a SQLite Database. Logic is included to handle Full, Incremental, and Log file types.
+
+**Pre-requisites**
+* [SQLite v3.50.4 or later](https://www.sqlite.org/download.html)
+
+**Supported File Formats**
+* CSV

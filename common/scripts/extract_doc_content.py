@@ -1,4 +1,5 @@
 import time
+import io
 from typing import Generator, List, Any
 
 from pandas import Series
@@ -100,7 +101,7 @@ def run(object_storage_service: ObjectStorageService, vault_service: VaultServic
                             filename: str = pyrfc6266.parse_filename(file_staging_response.headers.get("Content-Disposition"))
                             object_storage_service.upload_object(
                                 object_path=f'{direct_data_folder}/{exported_document.id}/{exported_document.major_version_number__v}_{exported_document.minor_version_number__v}/{filename}',
-                                data=file_staging_response.binary_content)
+                                data=io.BytesIO(file_staging_response.binary_content))
                     is_vault_job_finished = True
                 else:
                     log_message(log_level='Debug',

@@ -7,9 +7,9 @@ from pandas import DataFrame
 
 class DatabaseService(ABC):
     def __init__(self, parameters: dict):
-        self.convert_to_parquet: bool = parameters['convert_to_parquet']
-        self.object_storage_root: str = parameters['object_storage_root']
-        self.schema: str = parameters['schema']
+        self.convert_to_parquet: bool = parameters.get('convert_to_parquet', False)
+        self.object_storage_root: str = parameters.get('object_storage_root', '')
+        self.schema: str = parameters.get('schema', '')
         self.db_connection: DatabaseConnection | None = None
 
     @abstractmethod

@@ -2,30 +2,22 @@ import pandas as pd
 from pandas import DataFrame
 from pyarrow import ExtensionArray
 
-from accelerators.redshift.connections.redshift_connection import RedshiftConnection
+from accelerators.sqlite.connections.sqlite_connection import SqliteConnection
 from common.services.database_service import DatabaseService
 from common.utilities import log_message, update_table_name_that_starts_with_digit
 
 
-class RedshiftService(DatabaseService):
+class SqliteService(DatabaseService):
     def __init__(self, parameters: dict):
         super().__init__(parameters)
-        self.host = parameters['host']
+        self.databases_folder = parameters['databases_folder']
         self.database = parameters['database']
-        self.schema = parameters['schema']
-        self.user = parameters['user']
-        self.password = parameters['password']
-        self.port = parameters['port']
-        self.iam_role = parameters['iam_redshift_s3_read']
-        self.db_connection: RedshiftConnection = self.get_connection()
+        self.db_connection: SqliteConnection = self.get_connection()
 
-    def get_connection(self) -> RedshiftConnection:
-        return RedshiftConnection(
-            database=self.database,
-            hostname=self.host,
-            port_number=self.port,
-            username=self.user,
-            user_password=self.password
+    def get_connection(self) -> SqliteConnection:
+        return SqliteConnection(
+            databases_folder=self.databases_folder,
+            database=self.database
         )
 
     @staticmethod
@@ -45,20 +37,17 @@ class RedshiftService(DatabaseService):
         for _, row in table_df.iterrows():
             column_name = row['column_name'].lower()
             data_type = row['type'].lower()
-            length = 64000
 
-            if (column_name == 'id' and data_type == 'string'):
-                column_def = f'"{column_name}" VARCHAR({length})'
-            elif (column_name == 'id' and data_type == 'number'):
-                column_def = f'"{column_name}" INTEGER'
-            elif data_type in ["datetime", "timestamp with time zone"]:
-                column_def = f'"{column_name}" TIMESTAMP'
+            if  data_type == 'string':
+                column_def = f'"{column_name}" TEXT'
+            if data_type in ["datetime", "timestamp with time zone"]:
+                column_def = f'"{column_name}" TEXT'
             elif data_type == "boolean":
-                column_def = f'"{column_name}" BOOLEAN'
+                column_def = f'"{column_name}" INTEGER'
             elif data_type in ["number", "numeric"]:
-                column_def = f'"{column_name}" NUMERIC'
+                column_def = f'"{column_name}" INTEGER'
             else:
-                column_def = f'"{column_name}" VARCHAR({length})'
+                column_def = f'"{column_name}" TEXT'
 
             column_definitions.append(column_def)
 
@@ -106,22 +95,20 @@ class RedshiftService(DatabaseService):
 
     def retrieve_column_info(self, table_name: str) -> dict:
         existing_columns_query = f"""
-            SELECT column_name, data_type, character_maximum_length
-            FROM information_schema.columns
-            WHERE
-            table_catalog = '{self.database}' 
-            AND table_schema = '{self.schema}'
-            AND table_name = '{table_name}'
+            SELECT
+                name AS COLUMN_NAME,
+                type AS DATA_TYPE
+            FROM
+                pragma_table_info('{table_name}');
         """
         sql_result = self.db_connection.execute_query(existing_columns_query)
-        columns = ['COLUMN_NAME', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH']
+        columns = ['COLUMN_NAME', 'DATA_TYPE']
         existing_columns_df = pd.DataFrame(sql_result, columns=columns)
 
         # Convert to dictionary for quick lookup
         return {
             row['COLUMN_NAME'].lower(): {
-                "DATA_TYPE": row["DATA_TYPE"].lower(),
-                "CHARACTER_MAXIMUM_LENGTH": row["CHARACTER_MAXIMUM_LENGTH"]
+                "DATA_TYPE": row["DATA_TYPE"].lower()
             }
             for _, row in existing_columns_df.iterrows()
         }
@@ -160,7 +147,7 @@ class RedshiftService(DatabaseService):
                                                             is_add=False)
 
         self.db_connection.execute_query(f"""
-                CREATE TABLE IF NOT EXISTS {self.schema}.{table_name} ({sql_string})
+                CREATE TABLE IF NOT EXISTS {table_name} ({sql_string})
             """)
 
     def add_columns_to_table(self, columns_to_add: pd.DataFrame, table_name: str):
@@ -169,13 +156,13 @@ class RedshiftService(DatabaseService):
             is_modify=False, is_add=True)
         for column_def in column_definitions.split(", "):
             alter_query: str = f"""
-                            ALTER TABLE {self.schema}.{table_name} {column_def}
+                            ALTER TABLE {table_name} {column_def}
                         """
             self.db_connection.execute_query(alter_query)
 
     def drop_tables_in_schema(self, tables: list | tuple):
         for (table_name,) in tables:
-            drop_query: str = f'DROP TABLE {self.schema}."{table_name}";'
+            drop_query: str = f'DROP TABLE IF EXISTS {table_name};'
             log_message(log_level='Info',
                         message=f"Executing: {drop_query}")
             self.db_connection.execute_query(drop_query)
@@ -190,7 +177,7 @@ class RedshiftService(DatabaseService):
     def drop_columns_from_table(self, table_name: str, columns: list):
         for column_name in columns:
             drop_column_query: str = f"""
-                ALTER TABLE {self.schema}.{table_name}
+                ALTER TABLE {table_name}
                 DROP COLUMN "{column_name}";
             """
             self.db_connection.execute_query(drop_column_query)
@@ -206,34 +193,47 @@ class RedshiftService(DatabaseService):
                                 starting_directory=starting_directory)
 
     def create_staging_table(self, staging_table_name: str, **kwargs):
-        formatted_headers = ", ".join(kwargs['csv_headers'])
 
-        create_staging_table_query: str = f"""
-                        CREATE TEMP TABLE {staging_table_name} (LIKE {self.schema}.{kwargs['table_name']});
-                        COPY {staging_table_name} ({formatted_headers}) 
-                        FROM '{kwargs['object_path']}'
-                        IAM_ROLE '{self.iam_role}'
-                        FORMAT AS CSV
-                        QUOTE '\"'
-                        IGNOREHEADER 1
-                        TIMEFORMAT 'auto'
-                        ACCEPTINVCHARS
-                        FILLRECORD
-                        TRUNCATECOLUMNS;
-                    """
-        self.db_connection.execute_query(create_staging_table_query)
+        df_deletions: DataFrame = pd.read_csv(kwargs['object_path'])
 
-    def delete_duplicate_rows_from_table(self, table_name: str, staging_table_name: str, pk_condition: str):
-        delete_duplicates_query = f"""
-                        DELETE FROM {self.schema}.{table_name}
-                        USING {staging_table_name}
-                        WHERE {pk_condition};
-                    """
-        self.db_connection.execute_query(delete_duplicates_query)
+        df_deletions.to_sql(
+            staging_table_name,
+            self.db_connection.con,
+            if_exists='replace',
+            index=False
+        )
+
+    def delete_duplicate_rows_from_table(self, table_name: str, staging_table_name: str, primary_keys: list):
+        if len(primary_keys) == 1:
+            # --- SINGLE PRIMARY KEY ---
+            pk_col = primary_keys[0]
+            delete_query = f"""
+            DELETE FROM {table_name}
+            WHERE {pk_col} IN (SELECT {pk_col} FROM {staging_table_name});
+            """
+        else:
+            # --- COMPOSITE PRIMARY KEY ---
+            pk_conditions = " AND ".join(
+                [f"staging.{col} = {table_name}.{col}" for col in primary_keys]
+            )
+            delete_query = f"""
+            DELETE FROM {table_name}
+            WHERE EXISTS (
+                SELECT 1 FROM {staging_table_name} AS staging
+                WHERE {pk_conditions}
+            );
+            """
+
+        # delete_duplicates_query = f"""
+        #                 DELETE FROM {table_name}
+        #                 WHERE {pk_condition}
+        #                 IN (SELECT {pk_condition} FROM {staging_table_name});
+        #             """
+        self.db_connection.execute_query(delete_query)
 
     def insert_into_target_table(self, table_name: str, **kwargs):
         insert_into_query: str = f"""
-                        INSERT INTO {self.schema}.{table_name}
+                        INSERT INTO {table_name}
                         SELECT DISTINCT * FROM {kwargs['staging_table_name']};
                     """
         self.db_connection.execute_query(insert_into_query)
@@ -241,70 +241,50 @@ class RedshiftService(DatabaseService):
     def process_delete(self, row: pd.Series, starting_directory: str):
         raw_table = row["extract"].split(".")[1]
         related_file = row["file"]
-        s3_file_uri = f"{self.object_storage_root}/{starting_directory}/{related_file}"
+        file_path: str = f"{starting_directory}/{related_file}"
         table_name = update_table_name_that_starts_with_digit(raw_table.replace('_deletes', ''))
         if raw_table != "metadata_deletes":
             columns = ''
             column_names = ''
             if table_name == 'picklist__sys':
                 column_names += 'object || object_field || picklist_value_name'
-                columns += 'object VARCHAR(255), object_field VARCHAR(255), picklist_value_name VARCHAR(255)'
+                columns += 'object TEXT, object_field TEXT, picklist_value_name TEXT'
             elif table_name == 'metadata':
                 column_names += 'extract || column_name'
-                columns += 'extract VARCHAR(255), column_name VARCHAR(255)'
+                columns += 'extract TEXT, column_name TEXT'
             else:
                 column_names += 'id'
-                columns += 'id VARCHAR(255)'
+                columns += 'id TEXT'
 
-            create_query = f"CREATE TEMPORARY TABLE temp_{table_name}_deletes ({columns}, deleted_date TIMESTAMPTZ)"
+            # Load the CSV keys into a pandas DataFrame
+            df_deletions: DataFrame = pd.read_csv(file_path)
 
-            # Load the data from the CSV file into the temporary view
-            self.db_connection.execute_query(create_query)
-
-            copy_query = f"""
-                    COPY temp_{table_name}_deletes FROM '{s3_file_uri}'
-                    IAM_ROLE '{self.iam_role}'
-                    FORMAT AS CSV 
-                    QUOTE '\"'
-                    IGNOREHEADER 1
-                    TIMEFORMAT 'auto';
-                    """
-
-            self.db_connection.execute_query(copy_query)
-
-            # Delete the matching rows from the target table
-            delete_query = (f"DELETE FROM {self.database}.{self.schema}.{table_name} "
-                            f"WHERE {column_names} IN (SELECT {column_names} FROM temp_{table_name}_deletes);")
+            # Create a temp table
+            temp_table_name: str = f'temp_{table_name}_deletes'
+            df_deletions.to_sql(
+                temp_table_name,
+                self.db_connection.con,
+                if_exists='replace',
+                index=False
+            )
+            delete_query = (f"DELETE FROM {table_name} "
+                            f"WHERE {column_names} IN (SELECT {column_names} FROM {temp_table_name});")
 
             self.db_connection.execute_query(delete_query)
 
+            # Delete the temp table
+            drop_temp_table_query = f"DROP TABLE IF EXISTS {temp_table_name};"
+            self.db_connection.execute_query(drop_temp_table_query)
+
+
     def load_full_or_log_data(self, table_name: str, object_path: str, headers: list = None):
-        final_headers_for_query: str = ''
-
-        if headers:
-            # Use a list comprehension to conditionally apply your quoting method.
-            processed_headers = [
-                self.set_quoted_identifier(h)  # Do this if the condition is true
-                if h and h[0].isdigit()  # Condition: if the header is not empty and starts with a digit
-                else h  # Otherwise, use the header as is
-                for h in headers
-            ]
-
-            # 3. Join the processed list back into a comma-separated string for the SQL query.
-            final_headers_for_query = ', '.join(processed_headers)
-
-        self.db_connection.execute_query(f"""
-                COPY {self.database}.{self.schema}.{table_name} ({final_headers_for_query}) 
-                FROM '{object_path}' 
-                IAM_ROLE '{self.iam_role}' 
-                FORMAT AS CSV 
-                QUOTE '\"' 
-                IGNOREHEADER 1 
-                TIMEFORMAT 'auto' 
-                ACCEPTINVCHARS 
-                FILLRECORD 
-                TRUNCATECOLUMNS;
-            """)
+        dataframe: DataFrame = pd.read_csv(object_path, low_memory=False)
+        dataframe.to_sql(name=table_name,
+                         con=self.db_connection.con,
+                         if_exists='append',
+                         index=False)
+        log_message(log_level='Info',
+                    message=f'Loaded {len(dataframe)} records into {table_name}')
 
     def load_incremental_data(self, table_name: str, object_path: str, headers: str = None):
         if table_name == 'metadata':
@@ -316,8 +296,6 @@ class RedshiftService(DatabaseService):
 
         # Load into a temporary staging table
         staging_table_name: str = f"{table_name}_staging"
-        pk_condition: str = " AND ".join(
-            [f"{self.schema}.{table_name}.{col} = {staging_table_name}.{col}" for col in primary_keys])
 
         self.create_staging_table(staging_table_name=staging_table_name,
                                   table_name=table_name,
@@ -326,13 +304,9 @@ class RedshiftService(DatabaseService):
 
         self.delete_duplicate_rows_from_table(table_name=table_name,
                                               staging_table_name=staging_table_name,
-                                              pk_condition=pk_condition)
+                                              primary_keys=primary_keys)
 
         self.insert_into_target_table(table_name=table_name,
                                       staging_table_name=staging_table_name)
 
-    def set_quoted_identifier(self, column_name: str) -> str:
-        """
-        Returns the column name wrapped in double quotes to handle special characters or reserved words.
-        """
-        return f'"{column_name}"'
+        self.db_connection.execute_query(f'DROP TABLE IF EXISTS {staging_table_name};')

@@ -217,12 +217,11 @@ class SnowflakeService(DatabaseService):
         relative_path: str = object_path.replace(stage_url, '')
         s3_stage_uri: str = f"{self.stage_name}/{relative_path}"
 
+        match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
         if self.convert_to_parquet:
             file_format_name = "parquet_file_format"
-            match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
         else:
             file_format_name = "csv_file_format"
-            match_by_column = ""
 
         copy_into_query: str = f"""
                     COPY INTO {staging_table_name}
@@ -326,6 +325,7 @@ class SnowflakeService(DatabaseService):
             # Load the data from the CSV file into the temporary view
             self.db_connection.execute_query(create_query)
 
+            match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;"
             if self.convert_to_parquet:
                 file_format_name = "parquet_file_format"
             else:
@@ -335,11 +335,8 @@ class SnowflakeService(DatabaseService):
                 COPY INTO {temp_table_name}
                 FROM @{self.stage_name}/{starting_directory}/{related_file}
                 FILE_FORMAT = {file_format_name}
+                {match_by_column}
             """
-            if self.convert_to_parquet:
-                load_query += "\nMATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
-
-            load_query += ";"
 
             self.db_connection.execute_query(load_query)
 
@@ -367,7 +364,8 @@ class SnowflakeService(DatabaseService):
                 CREATE OR REPLACE FILE FORMAT {file_format_name}
                 FIELD_OPTIONALLY_ENCLOSED_BY = '"'
                 TYPE = 'CSV'
-                SKIP_HEADER = 1;
+                SKIP_HEADER = 0
+                PARSE_HEADER = TRUE;
             """)
 
     def load_full_or_log_data(self, table_name: str, object_path: str, headers: list = None):
@@ -375,12 +373,11 @@ class SnowflakeService(DatabaseService):
         relative_path: str = object_path.replace(stage_url, '')
         s3_stage_uri: str = f"{self.stage_name}/{relative_path}"
 
+        match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
         if self.convert_to_parquet:
             file_format_name = "parquet_file_format"
-            match_by_column = "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE"
         else:
             file_format_name = "csv_file_format"
-            match_by_column = ""
 
         self.create_file_format(file_format_name=file_format_name)
 

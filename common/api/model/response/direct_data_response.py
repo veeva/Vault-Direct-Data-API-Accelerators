@@ -29,8 +29,8 @@ class DirectDataResponse(VaultResponse):
         GET /api/{version}/services/directdata/files/{name}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.1/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/24.1/#retrieve-available-direct-data-files)
-        [https://developer.veevavault.com/api/24.1/#download-direct-data-file](https://developer.veevavault.com/api/24.1/#download-direct-data-file)
+        [https://developer.veevavault.com/api/25.3/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/25.3/#retrieve-available-direct-data-files)
+        [https://developer.veevavault.com/api/25.3/#download-direct-data-file](https://developer.veevavault.com/api/25.3/#download-direct-data-file)
     """
 
     data: List[DirectDataItem] = Field(default_factory=list)

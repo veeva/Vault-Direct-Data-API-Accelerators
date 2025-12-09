@@ -1,0 +1,42 @@
+[project]
+name = "vault-direct-data-api-accelerators"
+version = "25.3.0"
+requires-python = ">=3.10.11"
+dependencies = [
+    "pyarrow~=19.0.0",
+    "pandas~=2.2.3",
+    "requests>=2.32.3",
+    "pydantic~=2.10.5",
+    "pyrfc6266~=1.0.2"
+]
+
+[tool.setuptools]
+packages = ["accelerators", "common"]
+
+[project.optional-dependencies]
+snowflake = [
+    "snowflake-connector-python",
+    "boto3~=1.36.4",
+    "botocore~=1.36.3",
+    "cryptography~=44.0.0",
+    "psycopg2-binary~=2.9.10"
+]
+
+redshift = [
+    "boto3~=1.36.4",
+    "botocore~=1.36.3",
+    "cryptography~=44.0.0",
+    "psycopg2-binary~=2.9.10"]
+
+databricks = [
+    "databricks-sql-connector~=4.0.0",
+    "boto3~=1.36.4",
+    "botocore~=1.36.3",
+    "cryptography~=44.0.0",
+    "psycopg2-binary~=2.9.10"]
+
+sql_database = [
+    "azure-identity>=1.22.0",
+    "azure-storage-blob>=12.25.1",
+    "pyodbc~=5.2.0"
+]

@@ -51,7 +51,8 @@ class SnowflakeConnection(DatabaseConnection):
                 database=self.database,
                 schema=self.schema,
                 private_key=private_key,
-                authenticator='snowflake'
+                authenticator='snowflake',
+                role=self.role
             )
 
             self.con = conn

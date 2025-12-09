@@ -1,4 +1,5 @@
 from typing import Generator, List, Any
+import io
 
 import pandas as pd
 import pyarrow.parquet as pq
@@ -74,7 +75,7 @@ def run(object_storage_service: ObjectStorageService, vault_service: VaultServic
                     continue
                 object_path: str = f'{direct_data_folder}/{doc_id}/{major_version}_{minor_version}/{doc_version["name__v"]}.txt'
                 object_storage_service.upload_object(object_path=object_path,
-                                                     data=download_text_response.binary_content)
+                                                     data=io.BytesIO(download_text_response.binary_content))
 
         except Exception as e:
             log_message(log_level='Error',

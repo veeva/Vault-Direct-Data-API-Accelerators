@@ -1,4 +1,5 @@
 import sys
+import io
 
 sys.path.append('.')
 from common.utilities import log_message
@@ -85,7 +86,8 @@ def run(vault_service: VaultService, object_storage_service: ObjectStorageServic
 
             object_storage_service.upload_object(
                 object_path=object_path,
-                data=download_response.binary_content)
+                data=io.BytesIO(download_response.binary_content)
+            )
 
         # Create multi-part upload if Direct Data File has multiple parts
         else:

@@ -26,7 +26,7 @@ class UserRetrieveResponse(VaultResponse):
         GET /api/{version}/objects/users/me
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.1/#validate-session-user](https://developer.veevavault.com/api/24.1/#validate-session-user)
+        [https://developer.veevavault.com/api/25.3/#validate-session-user](https://developer.veevavault.com/api/25.3/#validate-session-user)
     """
 
     users: List[UserNode] = Field(default_factory=list)

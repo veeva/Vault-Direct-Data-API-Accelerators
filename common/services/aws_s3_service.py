@@ -1,8 +1,12 @@
 import io
+import json
 import csv
 import os
 import time
+from typing import BinaryIO
+
 import pyarrow.parquet as pq
+import pyarrow.fs
 
 from botocore.client import BaseClient
 from botocore.response import StreamingBody
@@ -40,8 +44,7 @@ class AwsS3Service(ObjectStorageService):
         try:
             self.credentials = sts_client.assume_role(
                 RoleArn=self.iam_role_arn,
-                RoleSessionName=f"Direct-Data-{step}-Session",
-                DurationSeconds=3600
+                RoleSessionName=f"Direct-Data-{step}-Session"
             ).get('Credentials')
 
             return self.credentials
@@ -68,26 +71,23 @@ class AwsS3Service(ObjectStorageService):
             raise e
 
 
-    def upload_object(self, object_path: str, data: bytes) -> None:
+    def upload_object(self, object_path: str, data: BinaryIO) -> None:
         """
         Uploads an object to the specified S3 bucket using a memory-efficient,
         multipart-capable method.
 
         :param object_path: Path to the object in the storage.
-        :param data: Data to be uploaded (as a bytes object).
+        :param data: The binary stream (file-like object) to be uploaded.
         :return: None on success. Raises ClientError on failure.
         """
         log_message(log_level='Debug',
                     message=f'Uploading to {self.bucket_name}/{object_path}')
         try:
-            # 1. Wrap your in-memory 'data' in a file-like object.
-            with io.BytesIO(data) as file_obj:
-                # 2. Use upload_fileobj() which handles multipart uploads automatically.
-                self.s3_client.upload_fileobj(
-                    Fileobj=file_obj,
-                    Bucket=self.bucket_name,
-                    Key=object_path
-                )
+            self.s3_client.upload_fileobj(
+                Fileobj=data,
+                Bucket=self.bucket_name,
+                Key=object_path
+            )
 
             log_message(log_level='Info',
                         message=f'Uploaded successfully to {self.bucket_name}/{object_path}')
@@ -225,64 +225,71 @@ class AwsS3Service(ObjectStorageService):
         log_message(log_level='Info',
                     message=f'Retrieving CSV headers for {object_path}')
 
-        response_stream = self.download_object_to_stream(object_path=object_path)
-
         try:
-            # 1. Read an initial chunk of bytes from the stream.
-            # Both Boto3's StreamingBody and Azure's StorageStreamDownloader support a .read(size) method.
-            # 4096 bytes (4KB) should be more than enough for any typical header line.
-            initial_bytes_chunk = response_stream.read(4096)
+            # This query tells S3 to return only the first line of the file.
+            # The FileHeaderInfo='None' parameter treats the first line as the header.
+            response = self.s3_client.select_object_content(
+                Bucket=self.bucket_name,
+                Key=object_path,
+                ExpressionType='SQL',
+                Expression="SELECT * FROM s3object s LIMIT 1",
+                InputSerialization={'CSV': {'FileHeaderInfo': 'NONE'}},
+                OutputSerialization={'CSV': {}}
+            )
 
-            if not initial_bytes_chunk:
-                log_message(log_level='Warning', message='Stream was empty or no data in initial chunk.')
+            # Collect the payload and decode it all at once
+            payload_chunks = []
+            for event in response['Payload']:
+                if 'Records' in event:
+                    payload_chunks.append(event['Records']['Payload'])
+
+            if not payload_chunks:
+                log_message(log_level='Warning', message='S3 Select returned no records.')
                 return None
 
-            # 2. Decode these bytes to text (UTF-8 is common for CSVs).
-            # We only need the first line.
-            try:
-                decoded_text_chunk = initial_bytes_chunk.decode('utf-8', errors='replace')
-                first_line = decoded_text_chunk.splitlines(keepends=False)[0] if (
-                        '\n' in decoded_text_chunk or '\r' in decoded_text_chunk) else decoded_text_chunk
-            except UnicodeDecodeError as ude:
-                log_message(log_level='Error', message=f"UTF-8 decoding error for headers: {ude}")
-                raise ValueError("Could not decode headers as UTF-8.") from ude
+            # Decode the complete result to avoid splitting characters
+            full_payload = b''.join(payload_chunks).decode('utf-8')
 
-            if not first_line.strip():  # Handle cases where the first line might be blank after decoding/stripping
-                log_message(log_level='Warning', message='Decoded header line is empty.')
-                return None
+            # Use csv.reader to correctly parse the header line
+            reader = csv.reader(io.StringIO(full_payload))
+            headers = next(reader)
+            return headers
 
-            # 3. Use io.StringIO to treat the first line string as a file for csv.reader.
-            with io.StringIO(first_line) as string_as_file:
-                csv_reader = csv.reader(string_as_file)
-                try:
-                    headers = next(csv_reader)
-                    return headers
-
-                except StopIteration:  # Handles case where the line was empty after all
-                    log_message(log_level='Warning', message='No CSV headers found in the first line.')
-                    return None
-        except csv.Error as e:
+        except Exception as e:
             log_message(log_level='Error',
-                        message=f'Error reading CSV file: {e}',
+                        message=f'Error using S3 Select on {object_path}',
                         exception=e)
-            return None
-        except StopIteration:
-            log_message(log_level='Error',
-                        message='CSV file appears to be empty or corrupted')
-            return None
+            raise e
 
     def get_headers_from_parquet_file(self, object_path: str) -> list:
         log_message(log_level='Debug',
                     message=f'Retrieving headers from Parquet file: {object_path}')
         try:
-            # stream: io.BytesIO = io.BytesIO()
-            response_stream: StreamingBody = self.download_object_to_stream(object_path=object_path)
-            stream: io.BytesIO = io.BytesIO(response_stream.read())
-            stream.seek(0)
+            response = self.s3_client.select_object_content(
+                Bucket=self.bucket_name,
+                Key=object_path,
+                ExpressionType='SQL',
+                Expression=f'SELECT * FROM s3object s LIMIT 1',
+                InputSerialization={'Parquet': {}},
+                OutputSerialization={'JSON': {}}
+            )
 
-            parquet_file: pq.ParquetFile = pq.ParquetFile(stream)  # Load the Parquet file
-            schema = parquet_file.schema_arrow
-            column_names: list[str] = schema.names
+            payload_chunks = []
+            for event in response['Payload']:
+                if 'Records' in event:
+                    payload_chunks.append(event['Records']['Payload'])
+
+            if payload_chunks:
+                full_payload_bytes = b''.join(payload_chunks)
+
+                # 3. Decode the complete payload at once
+                records = full_payload_bytes.decode('utf-8')
+
+                first_record_str = records.split('\n')[0]
+                if first_record_str:
+                    first_record = json.loads(first_record_str)
+                    # The keys of the first JSON record are the column headers
+                    column_names = list(first_record.keys())
             log_message(log_level='Info',
                         message=f'Retrieved headers from Parquet file: {object_path}')
             return column_names

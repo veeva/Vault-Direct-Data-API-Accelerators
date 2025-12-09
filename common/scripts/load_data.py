@@ -183,7 +183,6 @@ def run(object_storage_service: ObjectStorageService, database_service: Database
         extract_type: str = direct_data_params['extract_type']
 
         database_service.db_connection.activate_cursor()
-        # TODO: Should this fail if the schema does not exist?
         database_service.check_if_schema_exists()
 
         file_extension: str = '.csv'

@@ -44,7 +44,7 @@ class JobCreateResponse(VaultResponse):
         POST /api/{version}/objects/documents/batch/actions/fileextract
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.1/#export-documents-1](https://developer.veevavault.com/api/24.1/#export-documents-1)
+        [https://developer.veevavault.com/api/25.3/#export-documents-1](https://developer.veevavault.com/api/25.3/#export-documents-1)
     """
 
     url: str = None
