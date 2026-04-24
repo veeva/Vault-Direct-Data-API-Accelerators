@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "vault-direct-data-api-accelerators"
-version = "25.3.0"
+version = "26.1.0"
 requires-python = ">=3.10.11"
 dependencies = [
     "pyarrow~=19.0.0",
@@ -36,6 +40,12 @@ databricks = [
     "psycopg2-binary~=2.9.10"]
 
 sql_database = [
+    "azure-identity>=1.22.0",
+    "azure-storage-blob>=12.25.1",
+    "pyodbc~=5.2.0"
+]
+
+fabric = [
     "azure-identity>=1.22.0",
     "azure-storage-blob>=12.25.1",
     "pyodbc~=5.2.0"

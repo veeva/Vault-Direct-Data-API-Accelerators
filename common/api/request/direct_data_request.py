@@ -29,8 +29,8 @@ class DirectDataRequest(VaultRequest):
     Class that defines methods used to call Direct Data endpoints.
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files)
-        [https://developer.veevavault.com/api/25.2/#download-direct-data-file](https://developer.veevavault.com/api/25.2/#download-direct-data-file)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/retrieve-available-direct-data-files](https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/retrieve-available-direct-data-files)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/download-direct-data-file](https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/download-direct-data-file)
     """
 
     _URL_LIST_ITEMS: str = '/services/directdata/files'
@@ -60,7 +60,7 @@ class DirectDataRequest(VaultRequest):
             GET /api/{version}/services/directdata/files
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files](https://developer.veevavault.com/api/25.2/#retrieve-available-direct-data-files)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/retrieve-available-direct-data-files](https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/retrieve-available-direct-data-files)
 
         Example:
             ```python
@@ -119,7 +119,7 @@ class DirectDataRequest(VaultRequest):
             GET /api/{version}/services/directdata/files/{name}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.2/#download-direct-data-file](https://developer.veevavault.com/api/25.2/#download-direct-data-file)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/download-direct-data-file](https://general.veevavault.dev/vault-api/api-reference/26.1/direct-data/download-direct-data-file)
 
         Example:
             ```python

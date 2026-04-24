@@ -7,8 +7,8 @@
     "account_url": "https://mystorageaccount.blob.core.windows.net/",
     "container": "veeva-vault",
     "direct_data_folder": "vault/direct-data",
-    "archive_filepath": "vault/direct-data/232635-20250703-0000-F.tar.gz",
-    "extract_folder": "232635-20250703-0000-F",
+    "archive_filepath": "vault/direct-data/232635-20250703-0500-F.tar.gz",
+    "extract_folder": "232635-20250703-0500-F",
     "document_content_folder": "document_content",
     "document_text_folder": "document_text"
   },

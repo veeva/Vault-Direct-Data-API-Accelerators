@@ -26,7 +26,7 @@ class FileStagingItemResponse(VaultResponse):
         POST /api/{version}/services/file_staging/items
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#create-folder-or-file](https://developer.veevavault.com/api/24.2/#create-folder-or-file)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/create-folder-or-file](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/create-folder-or-file)
     """
 
     data: FileStagingItem = None
@@ -47,7 +47,7 @@ class FileStagingItemBulkResponse(VaultResponse):
         GET /api/{version}/services/file_staging/items/{item}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#list-items-at-a-path](https://developer.veevavault.com/api/24.2/#list-items-at-a-path)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/list-items-at-a-path](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/list-items-at-a-path)
     """
 
     data: List[FileStagingItem] = Field(default_factory=list)
@@ -83,8 +83,8 @@ class FileStagingSessionResponse(VaultResponse):
         GET /api/{version}/services/file_staging/upload/{upload_session_id}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#create-resumable-upload-session](https://developer.veevavault.com/api/24.2/#create-resumable-upload-session)<br/>
-        [https://developer.veevavault.com/api/24.2/#get-upload-session-details](https://developer.veevavault.com/api/24.2/#get-upload-session-details)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/create-resumable-upload-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/create-resumable-upload-session)<br/>
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/get-upload-session-details](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/get-upload-session-details)
     """
 
     data: ResumableUploadSession = None
@@ -105,7 +105,7 @@ class FileStagingSessionBulkResponse(VaultResponse):
         GET /api/{version}/services/file_staging/upload
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#list-upload-sessions](https://developer.veevavault.com/api/24.2/#list-upload-sessions)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-upload-sessions](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-upload-sessions)
     """
 
     data: List[ResumableUploadSession] = Field(default_factory=list)
@@ -139,7 +139,7 @@ class FileStagingSessionPartResponse(VaultResponse):
         PUT /api/{version}/services/file_staging/upload/{upload_session_id}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#upload-to-a-session](https://developer.veevavault.com/api/24.2/#upload-to-a-session)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/upload-to-a-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/upload-to-a-session)
     """
 
     data: ResumableUploadSessionPart = None
@@ -159,7 +159,7 @@ class FileStagingSessionPartBulkResponse(VaultResponse):
         GET /api/{version}/services/file_staging/upload/{upload_session_id}/parts
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#list-file-parts-uploaded-to-session](https://developer.veevavault.com/api/24.2/#list-file-parts-uploaded-to-session)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-file-parts-uploaded-to-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-file-parts-uploaded-to-session)
     """
 
     data: List[ResumableUploadSessionPart] = Field(default_factory=list)
@@ -183,9 +183,9 @@ class FileStagingJobResponse(VaultResponse):
         POST /api/{version}/services/file_staging/upload/{upload_session_id}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#update-folder-or-file](https://developer.veevavault.com/api/24.2/#update-folder-or-file)<br/>
-        [https://developer.veevavault.com/api/24.2/#delete-file-or-folder](https://developer.veevavault.com/api/24.2/#delete-file-or-folder)<br/>
-        [https://developer.veevavault.com/api/24.2/#commit-upload-session](https://developer.veevavault.com/api/24.2/#commit-upload-session)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/update-folder-or-file](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/update-folder-or-file)<br/>
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/delete-file-or-folder](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/delete-file-or-folder)<br/>
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/commit-upload-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/commit-upload-session)
     """
 
     data: Job = None

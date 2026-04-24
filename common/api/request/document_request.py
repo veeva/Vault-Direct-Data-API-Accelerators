@@ -63,7 +63,7 @@ class DocumentRequest(VaultRequest):
     Class that defines methods used to call Documents endpoints.
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#documents](https://developer.veevavault.com/api/25.3/#documents)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents)
     """
 
     _URL_DOC_ALL_FIELDS: str = '/metadata/objects/documents/properties'
@@ -100,7 +100,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/metadata/objects/documents/properties
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-all-document-fields](https://developer.veevavault.com/api/25.3/#retrieve-all-document-fields)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-all-document-fields](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-all-document-fields)
 
         Example:
             ```python
@@ -137,7 +137,7 @@ class DocumentRequest(VaultRequest):
             POST /api/{version}/metadata/objects/documents/properties/find_common
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-common-document-fields](https://developer.veevavault.com/api/25.3/#retrieve-common-document-fields)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-common-document-fields](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-common-document-fields)
 
         Example:
             ```python
@@ -177,7 +177,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/metadata/objects/documents/types
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-all-document-types](https://developer.veevavault.com/api/25.3/#retrieve-all-document-types)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-all-document-types](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-all-document-types)
 
         Example:
             ```python
@@ -212,7 +212,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/metadata/objects/documents/types/{type}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document-type](https://developer.veevavault.com/api/25.3/#retrieve-document-type)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-type](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-type)
 
         Example:
             ```python
@@ -257,7 +257,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/metadata/objects/documents/types/{type}/subtypes/{subtype}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document-subtype](https://developer.veevavault.com/api/25.3/#retrieve-document-subtype)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-subtype](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-subtype)
 
         Example:
             ```python
@@ -304,7 +304,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/metadata/objects/documents/types/{type}/subtypes/{subtype}/classifications/{classification}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document-classification](https://developer.veevavault.com/api/25.3/#retrieve-document-classification)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-classification](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-classification)
 
         Example:
             ```python
@@ -351,7 +351,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-all-documents](https://developer.veevavault.com/api/25.3/#retrieve-all-documents)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents)
 
         Example:
             ```python
@@ -409,7 +409,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document](https://developer.veevavault.com/api/25.3/#retrieve-document)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document)
 
         Example:
             ```python
@@ -445,7 +445,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}/versions
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document-versions](https://developer.veevavault.com/api/25.3/#retrieve-document-versions)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-versions](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-versions)
 
         Example:
             ```python
@@ -487,7 +487,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}/versions/{major_version}/{minor_version}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document-version](https://developer.veevavault.com/api/25.3/#retrieve-document-version)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-version](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-version)
 
         Example:
             ```python
@@ -532,7 +532,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}/file
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#download-document-file](https://developer.veevavault.com/api/25.3/#download-document-file)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/download-document-file](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/download-document-file)
 
         Example:
             ```python
@@ -577,7 +577,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/file
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#download-document-version-file](https://developer.veevavault.com/api/25.3/#download-document-version-file)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/download-document-version-file](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/download-document-version-file)
 
         Example:
             ```python
@@ -623,7 +623,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/thumbnail
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#download-document-version-thumbnail-file](https://developer.veevavault.com/api/25.3/#download-document-version-thumbnail-file)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/download-document-version-thumbnail-file](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/download-document-version-thumbnail-file)
 
         Example:
             ```python
@@ -666,7 +666,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/{doc_id}/versions/{major_version}/{minor_version}/text
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.2/#download-document-text](https://developer.veevavault.com/api/25.2/#download-document-text)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-version-text](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-version-text)
 
         Example:
             ```python
@@ -706,7 +706,7 @@ class DocumentRequest(VaultRequest):
             POST /api/{version}/objects/documents
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#create-single-document](https://developer.veevavault.com/api/25.3/#create-single-document)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents/create-single-document](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents/create-single-document)
 
         Example:
             ```python
@@ -752,7 +752,7 @@ class DocumentRequest(VaultRequest):
             POST /api/{version}/objects/documents/batch
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#create-multiple-documents](https://developer.veevavault.com/api/25.3/#create-multiple-documents)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents/create-multiple-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents/create-multiple-documents)
 
         Example:
             ```python
@@ -804,7 +804,7 @@ class DocumentRequest(VaultRequest):
             PUT /api/{version}/objects/documents/{doc_id}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#update-single-document](https://developer.veevavault.com/api/24.2/#update-single-document)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/update-documents/update-single-document](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/update-documents/update-single-document)
 
         Example:
             ```python
@@ -850,7 +850,7 @@ class DocumentRequest(VaultRequest):
             POST /api/{version}/objects/documents/batch/actions/fileextract
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#export-documents-1](https://developer.veevavault.com/api/25.3/#export-documents-1)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/export-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/export-documents)
 
         Example:
             ```python
@@ -898,7 +898,7 @@ class DocumentRequest(VaultRequest):
             POST /api/{version}/objects/documents/versions/batch/actions/fileextract
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#export-document-versions](https://developer.veevavault.com/api/25.3/#export-document-versions)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/export-document-versions](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/export-document-versions)
 
         Example:
             ```python
@@ -941,7 +941,7 @@ class DocumentRequest(VaultRequest):
             GET /api/{version}/objects/documents/batch/actions/fileextract/{jobid}/results
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-document-export-results](https://developer.veevavault.com/api/25.3/#retrieve-document-export-results)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/retrieve-document-export-results](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/retrieve-document-export-results)
 
         Example:
             ```python
@@ -959,6 +959,16 @@ class DocumentRequest(VaultRequest):
                 print(f'Minor Version Number: {exported_document.minor_version_number__v}')
             ```
         """
+        endpoint = self.get_api_endpoint(endpoint=self._URL_DOC_EXTRACT_RESULTS)
+        endpoint = endpoint.replace('{jobid}', str(job_id))
+
+        self._add_header_param(http_request_connector.HTTP_HEADER_CONTENT_TYPE,
+                               http_request_connector.HTTP_CONTENT_TYPE_JSON)
+
+        return self._send(http_method=HttpMethod.GET,
+                          url=endpoint,
+                          response_class=DocumentExportResponse)
+
         endpoint = self.get_api_endpoint(endpoint=self._URL_DOC_EXTRACT_RESULTS)
         endpoint = endpoint.replace('{jobid}', str(job_id))
 

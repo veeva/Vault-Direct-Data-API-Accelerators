@@ -31,7 +31,7 @@ class AuthenticationRequest(VaultRequest):
         to establish the Vault session.
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#authentication](https://developer.veevavault.com/api/25.3/#authentication)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password)
     """
 
     _URL_API: str = ''
@@ -62,7 +62,7 @@ class AuthenticationRequest(VaultRequest):
         #     GET /api/{version}/auth
         #
         # Vault API Documentation:
-        #     [https://developer.veevavault.com/api/25.3/#user-name-and-password](https://developer.veevavault.com/api/25.3/#user-name-and-password)
+        #     [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password)
 
         endpoint = self.get_api_endpoint(endpoint=self._URL_AUTH)
         self._add_header_param(http_request_connector.HTTP_HEADER_CONTENT_TYPE,
@@ -96,7 +96,7 @@ class AuthenticationRequest(VaultRequest):
         #     POST login.veevavault.com/auth/oauth/session/{oauth_oidc_profile_id}
         #
         # Vault API Documentation:
-        #     [https://developer.veevavault.com/api/25.3/#oauth-2-0-openid-connect](https://developer.veevavault.com/api/25.3/#oauth-2-0-openid-connect)
+        #     [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/oauth-20-openid-connect](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/oauth-20-openid-connect)
 
         endpoint = self._URL_OAUTH.replace("{oauth_oidc_profile_id}", self._vault_oauth_profile_id)
 
@@ -173,7 +173,7 @@ class AuthenticationRequest(VaultRequest):
             POST https://login.veevavault.com/auth/discovery
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#authentication-type-discovery](https://developer.veevavault.com/api/25.3/#authentication-type-discovery)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/authentication-type-discovery](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/authentication-type-discovery)
 
         Note:
             Authenticating beforehand is not required to use this endpoint
@@ -222,7 +222,7 @@ class AuthenticationRequest(VaultRequest):
             POST /api/{version}/keep-alive
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#session-keep-alive](https://developer.veevavault.com/api/25.3/#session-keep-alive)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/session-keep-alive](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/session-keep-alive)
 
         Example:
             ```python
@@ -257,7 +257,7 @@ class AuthenticationRequest(VaultRequest):
             GET /api/{version}/objects/users/me
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#validate-session-user](https://developer.veevavault.com/api/25.3/#validate-session-user)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password)
 
         Example:
             ```python
@@ -292,7 +292,7 @@ class AuthenticationRequest(VaultRequest):
             GET /api
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#retrieve-api-versions](https://developer.veevavault.com/api/25.3/#retrieve-api-versions)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/retrieve-api-versions](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/retrieve-api-versions)
 
         Example:
             ```python
@@ -330,7 +330,7 @@ class AuthenticationRequest(VaultRequest):
             DELETE /api/{version}/session
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.3/#end-session](https://developer.veevavault.com/api/25.3/#end-session)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/end-session](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/end-session)
 
         Example:
             ```python

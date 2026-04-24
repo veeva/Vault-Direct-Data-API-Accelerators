@@ -233,7 +233,10 @@ class AwsS3Service(ObjectStorageService):
                 Key=object_path,
                 ExpressionType='SQL',
                 Expression="SELECT * FROM s3object s LIMIT 1",
-                InputSerialization={'CSV': {'FileHeaderInfo': 'NONE'}},
+                InputSerialization={'CSV': {
+                    'FileHeaderInfo': 'NONE',
+                    'AllowQuotedRecordDelimiter': True
+                }},
                 OutputSerialization={'CSV': {}}
             )
 

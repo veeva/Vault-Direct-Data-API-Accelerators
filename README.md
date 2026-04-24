@@ -2,7 +2,7 @@
 
 ## Introduction
 
-[Direct Data API](https://developer.veevavault.com/directdata/) is a new class of API that provides high-speed read-only data access to Vault. Direct Data API is a reliable, easy-to-use, timely, and consistent API for extracting Vault data. It is designed for organizations that wish to replicate large amounts of Vault data to an external database, data warehouse, or data lake.
+[Direct Data API](https://general.veevavault.dev/direct-data-api/) is a new class of API that provides high-speed read-only data access to Vault. Direct Data API is a reliable, easy-to-use, timely, and consistent API for extracting Vault data. It is designed for organizations that wish to replicate large amounts of Vault data to an external database, data warehouse, or data lake.
 
 The Direct Data accelerators are discrete groups of Python scripts, intended to facilitate the loading of data from Vault to external systems. Each accelerator provides a working example of using Direct Data API to connect Vault to an object storage system and a target data system.
 

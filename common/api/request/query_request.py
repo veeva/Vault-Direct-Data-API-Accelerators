@@ -34,7 +34,7 @@ class QueryRequest(VaultRequest):
     Class that defines methods used to call Query endpoints.
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.2/#vault-query-language-vql](https://developer.veevavault.com/api/25.2/#vault-query-language-vql)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/vault-query-language-vql/submitting-a-query](https://general.veevavault.dev/vault-api/api-reference/26.1/vault-query-language-vql/submitting-a-query)
     """
 
     HTTP_HEADER_VAULT_DESCRIBE_QUERY: str = 'X-VaultAPI-DescribeQuery'
@@ -68,7 +68,7 @@ class QueryRequest(VaultRequest):
             POST /api/{version}/query
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/25.2/#submitting-a-query](https://developer.veevavault.com/api/25.2/#submitting-a-query)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/vault-query-language-vql/submitting-a-query](https://general.veevavault.dev/vault-api/api-reference/26.1/vault-query-language-vql/submitting-a-query)
 
         Example:
             ```python

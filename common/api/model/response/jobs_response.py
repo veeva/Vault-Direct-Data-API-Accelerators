@@ -23,7 +23,7 @@ class JobStatusResponse(VaultResponse):
         GET /api/{version}/services/jobs/{job_id}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#retrieve-job-status](https://developer.veevavault.com/api/24.2/#retrieve-job-status)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/jobs/retrieve-job-status](https://general.veevavault.dev/vault-api/api-reference/26.1/jobs/retrieve-job-status)
     """
 
     data: Job = None
@@ -44,7 +44,7 @@ class JobCreateResponse(VaultResponse):
         POST /api/{version}/objects/documents/batch/actions/fileextract
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#export-documents-1](https://developer.veevavault.com/api/25.3/#export-documents-1)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/export-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/export-documents)
     """
 
     url: str = None

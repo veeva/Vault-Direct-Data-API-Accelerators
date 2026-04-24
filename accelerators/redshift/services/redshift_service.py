@@ -50,9 +50,11 @@ class RedshiftService(DatabaseService):
             if (column_name == 'id' and data_type == 'string'):
                 column_def = f'"{column_name}" VARCHAR({length})'
             elif (column_name == 'id' and data_type == 'number'):
-                column_def = f'"{column_name}" INTEGER'
+                column_def = f'"{column_name}" BIGINT'
             elif data_type in ["datetime", "timestamp with time zone"]:
                 column_def = f'"{column_name}" TIMESTAMP'
+            elif data_type == "date":
+                column_def = f'"{column_name}" DATE'
             elif data_type == "boolean":
                 column_def = f'"{column_name}" BOOLEAN'
             elif data_type in ["number", "numeric"]:
@@ -206,11 +208,21 @@ class RedshiftService(DatabaseService):
                                 starting_directory=starting_directory)
 
     def create_staging_table(self, staging_table_name: str, **kwargs):
-        formatted_headers = ", ".join(kwargs['csv_headers'])
+        headers: list = kwargs.get('csv_headers', [])
+        final_headers_for_query: str = ''
+        if headers:
+            # Use a list comprehension to conditionally apply your quoting method.
+            processed_headers = [
+                self.set_quoted_identifier(header)  # Do this if the condition is true
+                for header in headers
+            ]
+
+            # 3. Join the processed list back into a comma-separated string for the SQL query.
+            final_headers_for_query = ', '.join(processed_headers)
 
         create_staging_table_query: str = f"""
                         CREATE TEMP TABLE {staging_table_name} (LIKE {self.schema}.{kwargs['table_name']});
-                        COPY {staging_table_name} ({formatted_headers}) 
+                        COPY {staging_table_name} ({final_headers_for_query}) 
                         FROM '{kwargs['object_path']}'
                         IAM_ROLE '{self.iam_role}'
                         FORMAT AS CSV
@@ -282,12 +294,9 @@ class RedshiftService(DatabaseService):
         final_headers_for_query: str = ''
 
         if headers:
-            # Use a list comprehension to conditionally apply your quoting method.
             processed_headers = [
-                self.set_quoted_identifier(h)  # Do this if the condition is true
-                if h and h[0].isdigit()  # Condition: if the header is not empty and starts with a digit
-                else h  # Otherwise, use the header as is
-                for h in headers
+                self.set_quoted_identifier(header)
+                for header in headers
             ]
 
             # 3. Join the processed list back into a comma-separated string for the SQL query.

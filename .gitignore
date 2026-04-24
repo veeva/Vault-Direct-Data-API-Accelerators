@@ -12,6 +12,7 @@ csv_to_parquet.py
 *finance_demo/
 *hr_demo/
 *direct_data_testing_lr/
+*eric_dev_lr/
 *hr/
 *finance/
 *finance_dashboard/
@@ -30,5 +31,7 @@ csv_to_parquet.py
 *accelerator_finance_dashboard.py
 *accelerator_direct_data_testing_lr.py
 *accelerator_performance.py
+*accelerator_eric_dev_lr.py
 
 *databases/
+*.pem

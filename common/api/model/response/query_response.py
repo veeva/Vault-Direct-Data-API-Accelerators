@@ -28,7 +28,7 @@ class QueryResponse(VaultResponse):
         POST /api/{version}/query
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.2/#submitting-a-query](https://developer.veevavault.com/api/25.2/#submitting-a-query)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/vault-query-language-vql/submitting-a-query](https://general.veevavault.dev/vault-api/api-reference/26.1/vault-query-language-vql/submitting-a-query)
     """
 
     data: List[QueryResult] = Field(default_factory=list)

@@ -31,8 +31,8 @@ class AuthenticationResponse(VaultResponse):
         POST https://login.veevavault.com/auth/oauth/session/{oath_oidc_profile_id}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#user-name-and-password](https://developer.veevavault.com/api/25.3/#user-name-and-password)<br>
-        [https://developer.veevavault.com/api/25.3/#oauth-2-0-openid-connect](https://developer.veevavault.com/api/25.3/#oauth-2-0-openid-connect)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/user-name-and-password)<br>
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/oauth-20-openid-connect](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/oauth-20-openid-connect)
     """
 
     sessionId: str = None
@@ -70,7 +70,7 @@ class ApiVersionResponse(VaultResponse):
         GET /api
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-api-versions](https://developer.veevavault.com/api/25.3/#retrieve-api-versions)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/retrieve-api-versions](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/retrieve-api-versions)
     """
 
     values: Dict[str, str] = Field(default_factory=dict)
@@ -113,7 +113,7 @@ class DiscoveryResponse(VaultResponse):
         GET https://login.veevavault.com/auth/discovery
 
     Vault API documentation:
-        [https://developer.veevavault.com/api/25.3/#authentication-type-discovery](https://developer.veevavault.com/api/25.3/#authentication-type-discovery)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/authentication-type-discovery](https://general.veevavault.dev/vault-api/api-reference/26.1/authentication/authentication-type-discovery)
     """
 
     data: DiscoveryData = None

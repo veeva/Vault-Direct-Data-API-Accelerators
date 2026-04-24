@@ -30,8 +30,8 @@ class DocumentFieldResponse(VaultResponse):
         POST /api/{version}/metadata/objects/documents/properties/find_common
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-all-document-fields](https://developer.veevavault.com/api/25.3/#retrieve-all-document-fields)
-        [https://developer.veevavault.com/api/25.3/#retrieve-common-document-fields](https://developer.veevavault.com/api/25.3/#retrieve-common-document-fields)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-all-document-fields](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-all-document-fields)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-common-document-fields](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-fields/retrieve-common-document-fields)
     """
 
     properties: List[DocumentField] = Field(default_factory=list)
@@ -52,7 +52,7 @@ class DocumentTypesResponse(VaultResponse):
         GET /api/{version}/metadata/objects/documents/types
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-all-document-types](https://developer.veevavault.com/api/25.3/#retrieve-all-document-types)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-all-document-types](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-all-document-types)
     """
 
     types: List[DocumentType] = Field(default_factory=list)
@@ -98,9 +98,9 @@ class DocumentTypeHeirarchyResponse(VaultResponse):
         GET /api/{version}/metadata/objects/documents/types/{type}/classifications/{classification}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-document-type](https://developer.veevavault.com/api/25.3/#retrieve-document-type)
-        [https://developer.veevavault.com/api/25.3/#retrieve-document-subtype](https://developer.veevavault.com/api/25.3/#retrieve-document-subtype)
-        [https://developer.veevavault.com/api/25.3/#retrieve-document-classification](https://developer.veevavault.com/api/25.3/#retrieve-document-classification)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-type](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-type)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-subtype](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-subtype)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-classification](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-document-types/retrieve-document-classification)
     """
     name: str = None
     label: str = None
@@ -195,7 +195,7 @@ class DocumentsResponse(VaultResponse):
         GET /api/{version}/objects/documents
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-all-documents](https://developer.veevavault.com/api/25.3/#retrieve-all-documents)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents)
     """
     documents: List[DocumentNode] = None
 
@@ -233,7 +233,7 @@ class DocumentResponse(VaultResponse):
         GET /api/{version}/objects/documents/{doc_id}
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-document](https://developer.veevavault.com/api/25.3/#retrieve-document)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document)
     """
     document: Document = None
     renditions: Renditions = Field(default_factory=list)
@@ -279,7 +279,7 @@ class DocumentVersionsResponse(VaultResponse):
         GET /api/{version}/objects/documents/{doc_id}/versions
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-document-versions](https://developer.veevavault.com/api/25.3/#retrieve-document-versions)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-versions](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/retrieve-documents/retrieve-document-versions)
     """
     versions: List[Version] = None
     renditions: Renditions = Field(default_factory=list)
@@ -299,7 +299,7 @@ class DocumentBulkResponse(VaultResponse):
         POST /api/{version}/objects/documents/batch
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#create-multiple-documents](https://developer.veevavault.com/api/25.3/#create-multiple-documents)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents/create-multiple-documents](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/create-documents/create-multiple-documents)
     """
     data: List[DocumentResponse] = Field(default_factory=list)
 
@@ -332,7 +332,7 @@ class DocumentExportResponse(VaultResponse):
         GET /api/{version}/objects/documents/batch/actions/fileextract/{jobid}/results
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/25.3/#retrieve-document-export-results](https://developer.veevavault.com/api/25.3/#retrieve-document-export-results)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/retrieve-document-export-results](https://general.veevavault.dev/vault-api/api-reference/26.1/documents/export-documents/retrieve-document-export-results)
     """
     data: List[ExportedDocument] = Field(default_factory=list)
 

@@ -35,7 +35,7 @@ class FileStagingRequest(VaultRequest):
     Class that defines methods used to call File Staging endpoints.
 
     Vault API Documentation:
-        [https://developer.veevavault.com/api/24.2/#file-staging](https://developer.veevavault.com/api/24.2/#file-staging)
+        [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/create-folder-or-file](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/create-folder-or-file)
     """
 
     _HTTP_HEADER_FILE_PART_NUMBER: str = "X-VaultAPI-FilePartNumber"
@@ -83,7 +83,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/items/{item}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#list-items-at-a-path](https://developer.veevavault.com/api/24.2/#list-items-at-a-path)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/list-items-at-a-path](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/list-items-at-a-path)
 
         Example:
             ```python
@@ -133,7 +133,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/items/{item}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#list-items-at-a-path](https://developer.veevavault.com/api/24.2/#list-items-at-a-path)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/list-items-at-a-path](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/list-items-at-a-path)
 
         Example:
             ```python
@@ -176,7 +176,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/items/content/{item}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#download-item-content](https://developer.veevavault.com/api/24.2/#download-item-content)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/download-item-content](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/download-item-content)
 
         Example:
             ```python
@@ -225,7 +225,7 @@ class FileStagingRequest(VaultRequest):
             POST /api/{version}/services/file_staging/items
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#create-folder-or-file](https://developer.veevavault.com/api/24.2/#create-folder-or-file)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/create-folder-or-file](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/create-folder-or-file)
 
         Example:
             ```python
@@ -281,7 +281,7 @@ class FileStagingRequest(VaultRequest):
             PUT /api/{version}/services/file_staging/items/{item}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#update-folder-or-file](https://developer.veevavault.com/api/24.2/#update-folder-or-file)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/update-folder-or-file](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/update-folder-or-file)
 
         Example:
             ```python
@@ -329,7 +329,7 @@ class FileStagingRequest(VaultRequest):
             DELETE /api/{version}/services/file_staging/items/{item}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#delete-file-or-folder](https://developer.veevavault.com/api/24.2/#delete-file-or-folder)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/delete-file-or-folder](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/delete-file-or-folder)
 
         Example:
             ```python
@@ -374,7 +374,7 @@ class FileStagingRequest(VaultRequest):
             POST /api/{version}/services/file_staging/upload
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#create-resumable-upload-session](https://developer.veevavault.com/api/24.2/#create-resumable-upload-session)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/create-resumable-upload-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/create-resumable-upload-session)
 
         Example:
             ```python
@@ -430,7 +430,7 @@ class FileStagingRequest(VaultRequest):
             PUT /api/{version}/services/file_staging/upload/{upload_session_id}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#upload-to-a-session](https://developer.veevavault.com/api/24.2/#upload-to-a-session)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/upload-to-a-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/upload-to-a-session)
 
         Example:
             ```python
@@ -484,7 +484,7 @@ class FileStagingRequest(VaultRequest):
             POST /api/{version}/services/file_staging/upload/{upload_session_id}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#commit-upload-session](https://developer.veevavault.com/api/24.2/#commit-upload-session)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/commit-upload-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/commit-upload-session)
 
         Example:
             ```python
@@ -521,7 +521,7 @@ class FileStagingRequest(VaultRequest):
             DELETE /api/{version}/services/file_staging/upload/{upload_session_id}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#abort-upload-session](https://developer.veevavault.com/api/24.2/#abort-upload-session)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/abort-upload-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/abort-upload-session)
 
         Example:
             ```python
@@ -554,7 +554,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/upload
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#list-upload-sessions](https://developer.veevavault.com/api/24.2/#list-upload-sessions)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-upload-sessions](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-upload-sessions)
 
         Example:
             ```python
@@ -592,7 +592,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/upload
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#list-upload-sessions](https://developer.veevavault.com/api/24.2/#list-upload-sessions)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-upload-sessions](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-upload-sessions)
 
         Example:
             ```python
@@ -626,7 +626,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/upload/{upload_session_id}
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#get-upload-session-details](https://developer.veevavault.com/api/24.2/#get-upload-session-details)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/get-upload-session-details](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/get-upload-session-details)
 
         Example:
             ```python
@@ -666,7 +666,7 @@ class FileStagingRequest(VaultRequest):
             GET /api/{version}/services/file_staging/upload/{upload_session_id}/parts
 
         Vault API Documentation:
-            [https://developer.veevavault.com/api/24.2/#list-file-parts-uploaded-to-session](https://developer.veevavault.com/api/24.2/#list-file-parts-uploaded-to-session)
+            [https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-file-parts-uploaded-to-session](https://general.veevavault.dev/vault-api/api-reference/26.1/file-staging/resumable-upload-sessions/list-file-parts-uploaded-to-session)
 
         Example:
             ```python
